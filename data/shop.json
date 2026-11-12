@@ -27,13 +27,28 @@
   "tiktok": ""
  },
  "pay": {
-  "jazz": "",
-  "jazzName": "",
-  "easy": "",
-  "easyName": "",
-  "bank": "",
-  "bankName": "",
-  "iban": ""
+  "accounts": [
+   {
+    "method": "JazzCash",
+    "title": "",
+    "number": ""
+   },
+   {
+    "method": "Easypaisa",
+    "title": "",
+    "number": ""
+   },
+   {
+    "method": "MCB Bank",
+    "title": "",
+    "number": ""
+   },
+   {
+    "method": "Meezan Bank",
+    "title": "",
+    "number": ""
+   }
+  ]
  },
  "slides": [
   {
@@ -152,7 +167,10 @@
    ],
    "added": 13,
    "photo": "images/products/tulip5.jpg",
-   "sample": true
+   "sample": true,
+   "was": 0,
+   "isNew": false,
+   "soldOut": true
   },
   {
    "id": "sun3",
