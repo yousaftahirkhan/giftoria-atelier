@@ -230,9 +230,6 @@ function orderText(o){
   if(o.need)L.push(`Needed by: ${fmtDate(o.need)}`);
   if(o.card)L.push(`Card message: ${o.card}`);
   if(o.note)L.push(`Note: ${o.note}`);
-  const acc=o.pct?payAccounts(S):[];
-  if(o.pct){L.push("","*Payment*");acc.forEach(a=>L.push(`${a.k}: ${a.v}${a.who?" ("+a.who+")":""}`));
-    L.push(`I will send the payment screenshot in this chat.`)}
   return L.join("\n");
 }
 const setMsg=(id,t,err)=>{$(id).textContent=t;$(id).className="msg"+(err?" err":"")};
