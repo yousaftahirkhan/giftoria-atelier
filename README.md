@@ -23,13 +23,16 @@ The site has two separate parts:
 
 ## Signing in to the super admin
 
-Select **Sign in with GitHub**. GitHub checks the account password and authenticator code (two-factor authentication must stay on for the account), and the admin stays signed in for 8 hours.
+1. **Sign in with Google** using an allowed Google account.
+2. **Enter the 6-digit code** from the authenticator app (the "Giftoria Atelier" entry).
 
-- The GitHub App **Giftoria Atelier Admin** is installed only on `giftoria-atelier` and `giftoria-orders`, with Contents read and write.
-- The sign-in service in `auth-worker/` runs on Cloudflare at `giftoria-auth.giftoria-atelier.workers.dev`. It swaps GitHub's one-time code for a short-lived token, accepts only the accounts listed in `ALLOWED_USERS`, and keeps the app's client secret out of this public repository.
-- Only the GitHub accounts in `admins` (`admin/config.js`) and `ALLOWED_USERS` (`auth-worker/wrangler.toml`) can manage the shop.
+Both steps are checked by the sign-in service in `auth-worker/` (Cloudflare, `giftoria-auth.giftoria-atelier.workers.dev`), not in the browser. It then gives the admin a 1-hour key limited to the two shop repositories and renews it while the session lasts (12 hours, or 30 days on a trusted device).
 
-**Fallback:** *Use an access token instead* accepts a [fine-grained token](https://github.com/settings/personal-access-tokens/new) limited to the two repositories, with Contents set to Read and write.
+- Allowed Google accounts are kept in the service's private `ALLOWED_EMAILS` setting, not in this repository.
+- The GitHub App **Giftoria Atelier Admin** is installed only on `giftoria-atelier` and `giftoria-orders`, with Contents read and write. Its private key, the authenticator secret and the session key are Cloudflare secrets.
+- To sign everyone out, change `SESSION_VERSION` in `auth-worker/wrangler.toml` and redeploy. To replace a lost authenticator, set a new `TOTP_SECRET` and scan the new QR code.
+
+**Other ways to sign in:** *Sign in with GitHub* (GitHub account password and GitHub's own authenticator code; GitHub accounts in `admins` and `ALLOWED_USERS` only), or a [fine-grained access token](https://github.com/settings/personal-access-tokens/new) limited to the two repositories with Contents set to Read and write.
 
 To redeploy the sign-in service: `cd auth-worker && npx wrangler deploy`.
 

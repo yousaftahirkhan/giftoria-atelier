@@ -3,7 +3,14 @@ main = "src/index.js"
 compatibility_date = "2026-06-01"
 workers_dev = true
 
+# Secrets (set with `npx wrangler secret put NAME`, never stored here):
+#   GITHUB_CLIENT_SECRET, GITHUB_APP_PRIVATE_KEY (PKCS#8), TOTP_SECRET, SESSION_SECRET, ALLOWED_EMAILS
 [vars]
 ADMIN_URL = "https://yousaftahirkhan.github.io/giftoria-atelier/admin/"
 ALLOWED_USERS = "yousaftahirkhan"
+REPO_OWNER = "yousaftahirkhan"
+SITE_REPO = "giftoria-atelier"
+ORDERS_REPO = "giftoria-orders"
+SESSION_VERSION = "1"
+GOOGLE_CLIENT_ID = "1053200574750-jp3u1ddiobmnlsh4pnh3tvp5fcpb0i9d.apps.googleusercontent.com"
 GITHUB_CLIENT_ID = "Iv23lih9733oMDWePRSR"

@@ -84,3 +84,5 @@ body{background:var(--bg)}
   .stats{grid-template-columns:1fr 1fr}
   .atop .logo b{font-size:18px}
 }
+.gbtn{display:flex;justify-content:center;min-height:44px}
+.otp{font-size:24px;letter-spacing:.35em;text-align:center;font-variant-numeric:tabular-nums;font-weight:700}

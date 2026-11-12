@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&display=swap">
 <link rel="stylesheet" href="../assets/base.css">
 <link rel="stylesheet" href="admin.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -24,22 +25,37 @@
       <h1>Sign in to manage the shop</h1>
       <p class="hint" style="margin-top:6px">Orders, products, homepage, business details and payments are managed here. Customers never see this page.</p>
     </div>
-    <div class="form" id="ghSignin">
-      <button class="btn dark block" type="button" id="ghBtn"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Sign in with GitHub</button>
-      <p class="hint" style="text-align:center">GitHub asks for your password and authenticator code. You stay signed in for 8 hours.</p>
-      <div class="msg err" id="ghMsg" role="alert"></div>
+    <div class="form" id="gSignin">
+      <div id="gStep1" class="form">
+        <div class="eyebrow" style="text-align:center">Step 1 of 2</div>
+        <div id="gBtn" class="gbtn"></div>
+        <p class="hint" style="text-align:center">Sign in with the shop's Google account.</p>
+      </div>
+      <form class="form" id="gStep2" hidden autocomplete="off" novalidate>
+        <div class="eyebrow">Step 2 of 2</div>
+        <p class="hint">Signed in as <b id="gEmail"></b>. Enter the 6-digit code from your authenticator app.</p>
+        <label for="otp">Authenticator code<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
+        <label class="toggle" for="trust"><input type="checkbox" id="trust"> Keep me signed in on this device for 30 days</label>
+        <button class="btn rose block" type="submit" id="otpBtn">Verify and sign in</button>
+        <button class="link" type="button" id="gRestart" style="align-self:center">Use a different Google account</button>
+      </form>
+      <div class="msg err" id="gMsg" role="alert"></div>
     </div>
-    <details class="help" id="tokenBox">
-      <summary>Use an access token instead</summary>
-    <form class="form" id="signinForm" autocomplete="off" style="margin-top:12px">
-      <label for="tok">GitHub access token<input id="tok" type="password" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="github_pat_…" required></label>
-      <label class="toggle" for="remember"><input type="checkbox" id="remember" checked> Keep me signed in on this device</label>
-      <button class="btn rose block" type="submit" id="signBtn">Sign in with token</button>
-      <div class="msg err" id="signMsg" role="alert"></div>
-    </form>
-    </details>
-    <details class="help">
-      <summary>How to get an access token</summary>
+    <details class="help" id="otherWays">
+      <summary>Other ways to sign in</summary>
+      <div class="form" id="ghSignin" style="margin-top:12px">
+        <button class="btn dark block" type="button" id="ghBtn"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Sign in with GitHub</button>
+        <p class="hint" style="text-align:center">GitHub asks for your password and its own authenticator code. You stay signed in for 8 hours.</p>
+        <div class="msg err" id="ghMsg" role="alert"></div>
+      </div>
+      <form class="form sep" id="signinForm" autocomplete="off" style="margin-top:14px">
+        <label for="tok">GitHub access token<input id="tok" type="password" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="github_pat_…" required></label>
+        <label class="toggle" for="remember"><input type="checkbox" id="remember" checked> Keep me signed in on this device</label>
+        <button class="btn ghost block" type="submit" id="signBtn">Sign in with token</button>
+        <div class="msg err" id="signMsg" role="alert"></div>
+      </form>
+      <details class="help" style="margin-top:12px">
+        <summary>How to get an access token</summary>
       <ol>
         <li>Sign in to GitHub with the shop's account and open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">New fine-grained token</a>.</li>
         <li>Name it <b>Giftoria admin</b> and choose an expiry date.</li>
@@ -47,7 +63,8 @@
         <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
         <li>Select <b>Generate token</b>, copy it and paste it above.</li>
       </ol>
-      <p class="hint">Keep the token private. Anyone who has it can change the website. If it is lost or shared, delete it on GitHub and create a new one.</p>
+        <p class="hint">Keep the token private. Anyone who has it can change the website. If it is lost or shared, delete it on GitHub and create a new one.</p>
+      </details>
     </details>
   </div>
 </section>

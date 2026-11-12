@@ -3,9 +3,11 @@
   "private": true,
   "description": "Sign-in service for the Giftoria Atelier super admin (Sign in with GitHub)",
   "scripts": {
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node --test test/"
   },
   "devDependencies": {
     "wrangler": "^4.161.0"
-  }
+  },
+  "type": "module"
 }

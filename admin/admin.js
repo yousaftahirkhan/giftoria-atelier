@@ -19,7 +19,14 @@ let S = normalizeShop({});
 
 /* ---------- GitHub API ---------- */
 class GHError extends Error { constructor(status, msg) { super(msg); this.status = status } }
-async function gh(path, {method = "GET", body, raw} = {}) {
+/* In "app" mode (Google + authenticator sign-in) the token comes from the sign-in service and lasts 1 hour;
+   it is renewed from the signed session shortly before it runs out, or once if GitHub rejects it. */
+async function gh(path, opts = {}) {
+  if (MODE === "app" && TOKEN_EXP - Date.now() < 5 * 60e3) await refreshAppToken();
+  try { return await ghOnce(path, opts) }
+  catch (e) { if (MODE === "app" && e.status === 401) { await refreshAppToken(); return ghOnce(path, opts) } throw e }
+}
+async function ghOnce(path, {method = "GET", body, raw} = {}) {
   let r;
   try {
     r = await fetch("https://api.github.com" + path, {method, cache: "no-store",
@@ -54,10 +61,12 @@ const dropToken = () => { try { [TOKEN_KEY, EXP_KEY].forEach(k => { localStorage
 const keepToken = (t, remember, expiresAt) => { dropToken(); try { const s = remember ? localStorage : sessionStorage; s.setItem(TOKEN_KEY, t); if (expiresAt) s.setItem(EXP_KEY, String(expiresAt)) } catch (e) {} };
 let ORDERS_OK = false;
 
-async function signIn(t) {
-  TOKEN = t;
-  const me = await gh("/user");
-  if (!ADMINS.includes(String(me.login).toLowerCase())) { const e = new GHError(403, "not admin"); e.notAdmin = me.login; throw e }
+async function signIn(t, mode = "user") {
+  TOKEN = t; MODE = mode;
+  if (mode === "user") {
+    const me = await gh("/user");
+    if (!ADMINS.includes(String(me.login).toLowerCase())) { const e = new GHError(403, "not admin"); e.notAdmin = me.login; throw e }
+  }
   await gh(SITE);
   try { await gh(ORD); ORDERS_OK = true } catch (e) { ORDERS_OK = false }
   await loadContent();
@@ -66,11 +75,74 @@ async function signIn(t) {
   loadOrders();
 }
 const signInError = e => e && e.notAdmin ? `The GitHub account ${e.notAdmin} is not allowed to manage this shop.` : e && e.status === 401 ? "Your sign-in has expired. Please sign in again." : errText(e);
-function showSignin(msg) {
-  TOKEN = ""; $("booting").hidden = true; $("app").hidden = true; $("signin").hidden = false;
-  $("ghMsg").textContent = msg || ""; $("signMsg").textContent = ""; $("tok").value = "";
-  if (!CFG.githubAppClientId || !CFG.authUrl) { $("ghSignin").hidden = true; $("tokenBox").open = true }
+function showSignin(msg, where = "google") {
+  TOKEN = ""; MODE = "user"; $("booting").hidden = true; $("app").hidden = true; $("signin").hidden = false;
+  $("gMsg").textContent = where === "google" ? msg || "" : ""; $("ghMsg").textContent = where === "github" ? msg || "" : "";
+  $("signMsg").textContent = ""; $("tok").value = "";
+  if (!CFG.githubAppClientId || !CFG.authUrl) $("ghSignin").hidden = true;
+  if (!CFG.googleClientId || !CFG.authUrl) { $("gSignin").hidden = true; $("otherWays").open = true }
+  if (where === "github") $("otherWays").open = true;
 }
+
+/* ---------- Google + authenticator sign-in ---------- */
+const SESSION_KEY = "ga-admin-session", SESSION_EXP_KEY = "ga-admin-session-exp";
+let MODE = "user", TOKEN_EXP = 0, SESSION = "", gCred = null;
+const loadSession = () => { const s = store(SESSION_KEY), x = +store(SESSION_EXP_KEY); if (s && x > Date.now()) return s; dropSession(); return "" };
+const dropSession = () => { try { [SESSION_KEY, SESSION_EXP_KEY].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k) }) } catch (e) {} };
+const keepSession = (s, exp, remember) => { dropSession(); try { const st = remember ? localStorage : sessionStorage; st.setItem(SESSION_KEY, s); st.setItem(SESSION_EXP_KEY, String(exp)) } catch (e) {} };
+async function authPost(path, body) {
+  let r;
+  try { r = await fetch(CFG.authUrl.replace(/\/$/, "") + path, {method: "POST", cache: "no-store", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}) }
+  catch (e) { throw new GHError(0, "No internet connection. Check your connection and try again.") }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new GHError(r.status, d.error || ""); e.code = d.error; throw e }
+  return d;
+}
+async function refreshAppToken() {
+  const d = await authPost("/token", {session: SESSION});
+  TOKEN = d.token; TOKEN_EXP = d.token_exp; return d;
+}
+function initGoogle() {
+  if (!CFG.googleClientId || !CFG.authUrl) return;
+  const go = () => {
+    google.accounts.id.initialize({client_id: CFG.googleClientId, callback: onGoogle, auto_select: false, ux_mode: "popup", itp_support: true});
+    google.accounts.id.renderButton($("gBtn"), {theme: "filled_black", size: "large", shape: "pill", text: "signin_with", logo_alignment: "left", width: 300});
+  };
+  if (window.google && google.accounts && google.accounts.id) return go();
+  let n = 0; const t = setInterval(() => {
+    if (window.google && google.accounts && google.accounts.id) { clearInterval(t); go() }
+    else if (++n > 75) { clearInterval(t); $("gMsg").textContent = "Google sign-in could not load. Check your connection and reload the page." }
+  }, 200);
+}
+function onGoogle(resp) {
+  gCred = resp && resp.credential; let email = "";
+  try { email = JSON.parse(atob(gCred.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email || "" } catch (e) {}
+  $("gEmail").textContent = email || "your Google account";
+  $("gStep1").hidden = true; $("gStep2").hidden = false; $("gMsg").textContent = ""; $("otp").value = ""; $("otp").focus();
+}
+$("gRestart").onclick = () => { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false; $("gMsg").textContent = ""; try { google.accounts.id.disableAutoSelect() } catch (e) {} };
+$("otp").addEventListener("input", () => { $("otp").value = $("otp").value.replace(/\D/g, "").slice(0, 6) });
+const LOGIN_ERR = {
+  bad_code: "That code is not correct. Use the newest code in your authenticator app and check that your phone's time is set automatically.",
+  google_invalid: "Your Google sign-in has expired. Select \"Use a different Google account\" and sign in again.",
+  not_allowed: "This Google account is not allowed to manage this shop.",
+  too_many: "Too many wrong codes. Please wait 15 minutes and try again."
+};
+$("gStep2").addEventListener("submit", async e => {
+  e.preventDefault();
+  const code = $("otp").value.replace(/\D/g, "");
+  if (code.length !== 6) { $("gMsg").textContent = "Enter the 6-digit code from your authenticator app."; return }
+  $("otpBtn").disabled = true; $("otpBtn").textContent = "Checking…"; $("gMsg").textContent = "";
+  try {
+    const d = await authPost("/login", {id_token: gCred, code, remember: $("trust").checked});
+    SESSION = d.session; keepSession(d.session, d.session_exp, $("trust").checked); TOKEN_EXP = d.token_exp; dropToken();
+    await signIn(d.token, "app");
+  } catch (err) {
+    $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err);
+    if (err.code === "google_invalid" || err.code === "not_allowed") { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false }
+    if (err.code === "bad_code") { $("otp").value = ""; $("otp").focus() }
+  } finally { $("otpBtn").disabled = false; $("otpBtn").textContent = "Verify and sign in" }
+});
 $("ghBtn").onclick = () => {
   const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
   try { sessionStorage.setItem(STATE_KEY, state) } catch (e) {}
@@ -99,7 +171,8 @@ $("signinForm").addEventListener("submit", async e => {
 });
 $("signOut").onclick = () => {
   if (dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
-  dirty = false; dropToken(); history.replaceState(null, "", location.pathname); location.reload();
+  dirty = false; dropToken(); dropSession(); try { google.accounts.id.disableAutoSelect() } catch (e) {}
+  history.replaceState(null, "", location.pathname); location.reload();
 };
 
 /* ---------- tabs ---------- */
@@ -424,11 +497,17 @@ $("pSave").onclick = () => {
 
 /* ---------- start ---------- */
 (async () => {
+  initGoogle();
   const ret = takeAuthReturn();
-  if (ret && ret.error) { showSignin(ret.error); return }
-  if (ret && ret.token) keepToken(ret.token, true, ret.expiresAt);
+  if (ret && ret.error) { showSignin(ret.error, "github"); return }
+  if (ret && ret.token) { dropSession(); keepToken(ret.token, true, ret.expiresAt) }
+  SESSION = loadSession();
+  if (SESSION) {
+    try { MODE = "app"; await refreshAppToken(); await signIn(TOKEN, "app"); return }
+    catch (e) { if (e.status === 401) dropSession(); SESSION = ""; showSignin(e.status === 401 ? "Your sign-in has expired. Please sign in again." : errText(e)); return }
+  }
   const t = storedToken();
   if (!t) { showSignin(); return }
   try { await signIn(t) }
-  catch (e) { if (e.status === 401 || e.notAdmin) dropToken(); showSignin(signInError(e)) }
+  catch (e) { if (e.status === 401 || e.notAdmin) dropToken(); showSignin(signInError(e), "github") }
 })();
