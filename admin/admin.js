@@ -245,7 +245,7 @@ function statusText(o, status) {
     making: [`${hi} your order is now being made by hand.`, "", id, "We will message you as soon as it is out for delivery."],
     sent: [`${hi} good news! *Your order is ready* and has been handed to our inDrive rider. It is on its way to you.`, "", id,
       ...(o.rider ? ["", "*Rider details*", `Name: ${o.rider.name}`, `Phone: ${o.rider.phone}`, ...(o.rider.vehicle ? [`Vehicle: ${o.rider.vehicle}`] : []), ""] : []),
-      o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you."],
+      o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you.", "", "*Once you receive your order, please reply here to let us know it has reached you safely.*"],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
     cancel: [`${hi} we are sorry, your order has been *cancelled*.`, "", id, ...(o.cancelReason ? [`Reason: ${o.cancelReason}`] : []), "", "If you have any questions, please reply to this message."]
   }[status];
