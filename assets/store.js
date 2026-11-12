@@ -184,7 +184,7 @@ function totals(){
   const base=sub+addT;
   const del=0; /* delivery is booked on inDrive; the customer pays the rider's fare, so it is not in the total */
   const shopPct=Math.min(100,Math.max(0,+S.shop.advancePct||0));
-  const tot=base+del, pct=payFull&&shopPct>0?100:shopPct;
+  const tot=base+del, pct=shopPct;
   const adv=pct>=100?tot:Math.ceil(tot*pct/100/10)*10;
   return{sub,adds,addT,del,tot,pct,adv,rest:tot-adv};
 }
@@ -201,8 +201,6 @@ function renderCart(){
   const t=totals();
   $("tSub").textContent=rs(t.sub);$("tAddRow").hidden=!t.adds.length;$("tAdd").textContent=rs(t.addT);
   $("tDel").textContent="Paid to rider";$("tTot").textContent=rs(t.tot);
-  {const sp=Math.min(100,Math.max(0,+S.shop.advancePct||0)),half=Math.ceil(t.tot*sp/100/10)*10;
-   $("payChoice").hidden=!(sp>0&&sp<100&&t.tot>0);$("payAdvTxt").textContent=`Pay ${sp}% advance now`;$("payAdvAmt").textContent=rs(half);$("payFullAmt").textContent=rs(t.tot)}
   $("tAdvRow").hidden=!t.pct;$("tAdvLbl").textContent=t.pct>=100?"Due now (full payment)":`Advance due now (${t.pct}%)`;$("tAdv").textContent=rs(t.adv);
 }
 $("lines").addEventListener("click",e=>{const rm=e.target.closest("button[data-rm]");
@@ -212,8 +210,7 @@ $("lines").addEventListener("click",e=>{const rm=e.target.closest("button[data-r
 $("addonBox").addEventListener("change",e=>{const c=e.target.closest("[data-ad]");if(!c)return;addSel[c.dataset.ad]=c.checked;renderCart()});
 {const d=load("gd-cust",{});["fName","fPhone","fAddr"].forEach(k=>{if(d[k])$(k).value=d[k]})}
 
-let ORDER=null,payFull=false;
-$("payChoice").addEventListener("change",e=>{payFull=$("payFull").checked;renderCart()});
+let ORDER=null;
 function buildOrder(){
   const t=totals();
   const items=Object.entries(cart).map(([id,q])=>{const p=findP(id);return{name:p.name,qty:q,price:p.price}});

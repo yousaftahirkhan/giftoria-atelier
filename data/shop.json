@@ -1,7 +1,7 @@
 {
  "shop": {
   "name": "Giftoria Atelier",
-  "announce": "Handmade to order · Delivered across Multan · 50% advance, balance on delivery",
+  "announce": "Handmade to order · Delivered across Multan by inDrive · Full payment in advance",
   "city": "Multan",
   "wa": "0317 6926757",
   "phone": "",
@@ -11,7 +11,7 @@
   "footAbout": "Handcrafted pipe-cleaner and crochet flowers, made to order in Multan. Bouquets, keepsakes and gifts that never wilt.",
   "delLocal": 250,
   "freeAbove": 5000,
-  "advancePct": 50
+  "advancePct": 100
  },
  "reg": {
   "owner": "",
@@ -127,9 +127,9 @@
   "ref": "tulip1"
  },
  "policies": {
-  "howto": "1. Add products to your cart and enter your delivery details.\n2. Place the order to receive your order number.\n3. Pay the advance by JazzCash, Easypaisa or bank transfer.\n4. Send your order number and payment screenshot on WhatsApp.\n5. We confirm your order, make it by hand and deliver it to your door in Multan.",
-  "refund": "Every item is made to order, and the advance pays for the materials.\n\n• Cancel before work begins and the advance is refunded in full.\n• Once work has begun, the advance is non-refundable.\n• If an item arrives damaged or incorrect, send a photo within 48 hours. We will remake it or refund you.",
-  "terms": "• We deliver within Multan only.\n• Prices are in Pakistani Rupees and may change.\n• Because every piece is handmade, colour and size may vary slightly.\n• Delivery times may vary with traffic and weather.\n• An order is confirmed once the advance is received.",
+  "howto": "1. Add products to your cart and enter your delivery details.\n2. Place the order to receive your order number.\n3. Pay the full amount by JazzCash, Easypaisa or bank transfer.\n4. Send your order number and payment screenshot on WhatsApp.\n5. We confirm your order, make it by hand and deliver it to your door in Multan.",
+  "refund": "Every item is made to order, and your payment covers the materials.\n\n• Cancel before work begins and your payment is refunded in full.\n• Once work has begun, the payment is non-refundable.\n• If an item arrives damaged or incorrect, send a photo within 48 hours. We will remake it or refund you.",
+  "terms": "• We deliver within Multan only.\n• Prices are in Pakistani Rupees and may change.\n• Because every piece is handmade, colour and size may vary slightly.\n• Delivery times may vary with traffic and weather.\n• An order is confirmed once full payment is received. The inDrive delivery fare is paid to the rider.",
   "privacy": "Your name, phone number and address are used only to process and deliver your order. We do not share them with anyone except the rider who delivers your order."
  },
  "addons": [

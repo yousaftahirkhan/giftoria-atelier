@@ -186,5 +186,3 @@ footer button.fl:hover{opacity:1;text-decoration:underline}
 .cart-float span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qty .rm{margin-left:4px;color:var(--rose);border-color:var(--rose);display:grid;place-items:center;padding:0}
 .qty .rm:hover{background:var(--blush)}
-.paychoice{border:0;padding:0;margin:4px 0 0;display:flex;flex-direction:column;gap:8px;min-width:0}
-.paychoice legend{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:4px;padding:0}
