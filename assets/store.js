@@ -216,7 +216,7 @@ function buildOrder(){
   const items=Object.entries(cart).map(([id,q])=>{const p=findP(id);return{name:p.name,qty:q,price:p.price}});
   t.adds.forEach(a=>items.push({name:"Add-on: "+a.name,qty:1,price:+a.price||0}));
   return {no:makeOrderNo(S.shop.name),items,...t,name:$("fName").value.trim(),phone:$("fPhone").value.trim(),city:S.shop.city||"Multan",
-    area:$("fArea").value==="Other"?"":$("fArea").value,addr:$("fAddr").value.trim(),need:"",note:"",card:""};
+    area:$("fArea").value==="Other"?"":$("fArea").value,addr:$("fAddr").value.trim(),need:$("fDate").value,needTxt:`${fmtDate($("fDate").value)}, ${$("fTime").value}`,note:"",card:""};
 }
 /* The shop's super admin reads this exact message format back in (Orders → Add an order from WhatsApp). */
 function orderText(o){
@@ -227,7 +227,7 @@ function orderText(o){
   if(o.pct){L.push(o.pct>=100?`Paying in full now: ${rs(o.adv)}`:`Advance due (${o.pct}%): ${rs(o.adv)}`);if(o.rest>0)L.push(`Balance on delivery: ${rs(o.rest)}`)}
   L.push("","*Delivery details*",`Name: ${o.name}`,`Phone: ${o.phone}`,`City: ${o.city}`,...(o.area?[`Area: ${o.area}`]:[]),`Address: ${o.addr}`);
   L.push(`Delivery: by inDrive, fare paid to the rider`);
-  if(o.need)L.push(`Needed by: ${fmtDate(o.need)}`);
+  if(o.need)L.push(`Needed by: ${o.needTxt||fmtDate(o.need)}`);
   if(o.card)L.push(`Card message: ${o.card}`);
   if(o.note)L.push(`Note: ${o.note}`);
   return L.join("\n");
@@ -238,6 +238,7 @@ function check(){
   if(!$("fName").value.trim())return "Please enter your name.";
   if($("fPhone").value.replace(/\D/g,"").length<10)return "Please enter a valid phone number, e.g. 0312 3456789.";
   if(!$("fArea").value)return "Please select your area.";
+  if(!$("fDate").value)return "Please choose the date you need it.";
   if(!$("fAddr").value.trim())return "Please enter your delivery address.";
   return "";
 }
@@ -287,6 +288,7 @@ function setStep(s){STEP=s;
   $("checkoutBtn").hidden=s!=="cart";$("confirmBtn").hidden=s!=="details";$("confirmNote").hidden=s!=="details";setMsg("msg","");
   const b=$("drawer").querySelector(s==="details"?"#detailsStep":"#cartStep");if(b)b.scrollTop=0}
 function backToCart(){setStep("cart")}
+{const t=new Date(),p=n=>String(n).padStart(2,"0");$("fDate").min=`${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`}
 $("checkoutBtn").onclick=()=>{if(!Object.keys(cart).length){setMsg("msg","Please add an item to your cart.",true);return}setStep("details");setTimeout(()=>$("fName").focus(),50)};
 $("toCartBtn").onclick=()=>setStep("cart");
 const openCart=()=>{if(STEP!=="pay")setStep("cart");show($("drawer"))};
@@ -296,7 +298,7 @@ $("newOrderBtn").onclick=()=>{cart={};addSel={};persist();ORDER=null;refreshProd
 /* Saves the order for the shop. WhatsApp still opens either way, so a network problem never blocks the customer. */
 function sendOrder(o){
   try{fetch(ORDER_API+"/order",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({order:{...o,needTxt:fmtDate(o.need)}})}).catch(()=>{})}catch(e){}
+    body:JSON.stringify({order:o})}).catch(()=>{})}catch(e){}
 }
 
 /* ---------- my orders: orders placed from this device ---------- */

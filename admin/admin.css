@@ -97,3 +97,4 @@ body{background:var(--bg)}
 .ostate{font-size:13px;font-weight:800;color:var(--muted);margin-right:auto}
 .cancel-info{font-size:14px;color:var(--rose);font-weight:700}
 .cancel-box{border:1.5px solid var(--rose);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.src.urgent{background:#FDE2E2;color:#B42318}

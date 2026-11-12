@@ -137,7 +137,7 @@ async function placeOrder(request, env) {
   const phone = str(o.phone, 20);
   if (!items.length || !str(o.name, 80) || digits(phone).length < 10) return reply(request, env, {error: "bad_order"}, 400);
   const rec = {no, items, sub: money(o.sub), addT: money(o.addT), del: money(o.del), tot: money(o.tot), adv: money(o.adv), rest: money(o.rest), pct: Math.min(100, money(o.pct)),
-    name: str(o.name, 80), phone, city: str(o.city, 40), area: str(o.area, 80), addr: str(o.addr, 300), needTxt: str(o.needTxt, 40), card: str(o.card, 200), note: str(o.note, 200),
+    name: str(o.name, 80), phone, city: str(o.city, 40), area: str(o.area, 80), addr: str(o.addr, 300), needTxt: str(o.needTxt, 60), need: /^\d{4}-\d{2}-\d{2}$/.test(String(o.need || "")) ? o.need : "", card: str(o.card, 200), note: str(o.note, 200),
     status: money(o.adv) > 0 ? "new" : "paid", at: Date.now(), source: "website"};
   const token = (await repoToken(env)).token;
   for (let attempt = 0; attempt < 3; attempt++) {

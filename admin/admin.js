@@ -269,6 +269,12 @@ function renderStats() {
   $("stPending").textContent = ORDERS.filter(o => o.status === "new").length;
   $("stMonth").textContent = rs(ORDERS.filter(o => { const d = new Date(o.at); return o.status !== "cancel" && d.getMonth() === m && d.getFullYear() === y }).reduce((s, o) => s + (o.tot || 0), 0));
 }
+/* Needed today or tomorrow (and not finished yet). */
+function isUrgent(o) {
+  if (!o.need || ["done", "cancel", "sent"].includes(o.status)) return false;
+  const d = new Date(o.need + "T00:00:00"), t = new Date(); t.setHours(0, 0, 0, 0);
+  return (d - t) / 864e5 <= 1;
+}
 function renderFilterCounts() {
   const n = k => ORDERS.filter(o => k === "all" || (k === "open" ? !["done", "cancel"].includes(o.status) : o.status === k)).length;
   $("oFilter").querySelectorAll("[data-f]").forEach(b => { const k = b.dataset.f; b.textContent = `${FILTERS.find(f => f[0] === k)[1]} (${n(k)})` });
@@ -280,7 +286,7 @@ function renderOrders() {
   const list = (q ? ORDERS : ORDERS.filter(o => oFilter === "all" || (oFilter === "open" ? !["done", "cancel"].includes(o.status) : o.status === oFilter)))
     .filter(o => !q || [o.no, o.name, o.phone, o.city].join(" ").toLowerCase().includes(q) || (qd.length >= 4 && String(o.phone).replace(/\D/g, "").includes(qd)));
   $("oList").innerHTML = list.length ? list.map(o => `<div class="ocard" data-s="${esc(o.status)}">
-    <div class="ohead"><span class="no">${esc(o.no)}${o.source === "website" ? ` <span class="src">Website</span>` : ""}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK", {day: "numeric", month: "short"})}${o.needTxt ? " · needed by " + esc(o.needTxt) : ""}</span></div>
+    <div class="ohead"><span class="no">${esc(o.no)}${o.source === "website" ? ` <span class="src">Website</span>` : ""}${isUrgent(o) ? ` <span class="src urgent">Urgent</span>` : ""}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK", {day: "numeric", month: "short"})}${o.needTxt ? " · needed by " + esc(o.needTxt) : ""}</span></div>
     <div><b>${esc(o.name || "—")}</b> <span class="sub">· ${esc(o.phone)} · ${esc(o.city)}</span></div>
     ${o.addr ? `<div class="sub">${o.area ? esc(o.area) + " · " : ""}${esc(o.addr)}</div>` : ""}
     ${o.items && o.items.length ? `<ul class="oitems">${o.items.map(i => `<li>${esc(i.name)} × ${i.qty}</li>`).join("")}</ul>` : ""}
@@ -358,7 +364,7 @@ function parseOrder(raw) {
   const o = {no: g(/(?:Order ID|Tracking ID|Order)\s*[—–\-:#*]*\s*\*?([A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4}))/i).toUpperCase(), items,
     del: num(g(/(?:^|\n)\s*Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/(?:Advance[^:\n]*|Paying in full now):\s*Rs\.?\s*([\d,]+)/i)),
     name: g(/(?:Naam|Name):\s*(.+)/i), phone: g(/Phone:\s*(.+)/i), city: g(/City:\s*(.+)/i), addr: g(/Address:\s*(.+)/i), area: g(/Area:\s*(.+)/i),
-    needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), card: g(/Card(?: message)?:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};
+    needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), need: (() => { const m = g(/Needed by:\s*(\d{1,2} \w{3} \d{4})/i); const d = m ? new Date(m) : null; return d && !isNaN(d) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "" })(), card: g(/Card(?: message)?:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};
   if (!o.tot && items.length) o.tot = items.reduce((s, i) => s + i.price * i.qty, 0) + o.del;
   if (!o.no) o.no = makeOrderNo(S.shop.name);
   o.rest = Math.max(0, o.tot - o.adv);
