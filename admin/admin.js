@@ -257,9 +257,9 @@ const statusLink = (o, st) => `https://wa.me/${intl(o.phone)}?text=${encodeURICo
 /* WhatsApp message to the customer with the advance due and the shop's payment accounts. */
 function paymentText(o) {
   const acc = payAccounts(S), shop = S.shop.name || "our shop";
-  const L = [`Hello ${o.name || ""}, thank you for your order with ${shop}.`, "", `Order ID: *${o.no}*`, `Total: ${rs(o.tot)}`, `*Advance due: ${rs(o.adv)}*`, ""];
-  if (acc.length) { L.push("Please send the advance to any one of these accounts:"); acc.forEach(a => L.push(`• ${a.k}: ${a.v}${a.who ? " (" + a.who + ")" : ""}`)) }
-  else L.push("We will share our account details with you shortly.");
+  const L = [`Hello ${o.name || ""}, thank you for your order with ${shop}.`, "", `Order ID: *${o.no}*`, `Total: ${rs(o.tot)}`, `*Amount to pay: ${rs(o.adv && o.adv < o.tot ? o.adv : o.tot)}*`, ""];
+  if (acc.length) { L.push("Please send the payment to any one of these accounts:"); acc.forEach(a => L.push(`• ${a.k}: ${a.v}${a.who ? " (" + a.who + ")" : ""}`)) }
+  else L.push("Our account details will follow in the next message.");
   L.push("", "After paying, please share the payment screenshot in this chat. We will confirm your order once the payment is checked.");
   return L.join("\n");
 }
