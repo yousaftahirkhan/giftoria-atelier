@@ -78,9 +78,11 @@ const fmtDate=s=>{if(!s)return "";const d=new Date(s+"T00:00:00");return isNaN(d
 const safeUrl=u=>/^https?:\/\//i.test(u||"")?u:"";
 let toastTimer;function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,2600)}
 
-function payAccounts(S){const p=S.pay||{},a=[];
-  if(p.jazz)a.push({k:"JazzCash",v:p.jazz,who:p.jazzName});
-  if(p.easy)a.push({k:"Easypaisa",v:p.easy,who:p.easyName});
+/* Payment accounts the owner lists in the admin (Payment & delivery). Rows without a number are not shown. */
+const PAY_METHODS=["JazzCash","Easypaisa","MCB Bank","Meezan Bank","HBL","UBL","Bank Alfalah","Allied Bank","Bank Al Habib","Other bank"];
+function payAccounts(S){const p=S.pay||{};
+  if(Array.isArray(p.accounts))return p.accounts.filter(a=>a&&String(a.number||"").trim()).map(a=>({k:a.method||"Bank transfer",v:String(a.number).trim(),who:String(a.title||"").trim()}));
+  const a=[];if(p.jazz)a.push({k:"JazzCash",v:p.jazz,who:p.jazzName});if(p.easy)a.push({k:"Easypaisa",v:p.easy,who:p.easyName});
   if(p.iban)a.push({k:p.bank||"Bank transfer",v:p.iban,who:p.bankName});return a}
 
 /* Tracking IDs look like GA-261112-K7Q4: shop initials, order date (YYMMDD) and four random characters

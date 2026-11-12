@@ -236,6 +236,17 @@ async function mutateOrders(fn, message) {
   finally { ordersBusy = false }
   return false;
 }
+/* WhatsApp message to the customer with the advance due and the shop's payment accounts. */
+function paymentText(o) {
+  const acc = payAccounts(S), shop = S.shop.name || "our shop";
+  const L = [`Hello ${o.name || ""}, thank you for your order with ${shop}.`, "", `Tracking ID: *${o.no}*`, `Total: ${rs(o.tot)}`, `*Advance due: ${rs(o.adv)}*`, ""];
+  if (acc.length) { L.push("Please send the advance to any one of these accounts:"); acc.forEach(a => L.push(`• ${a.k}: ${a.v}${a.who ? " (" + a.who + ")" : ""}`)) }
+  else L.push("We will share our account details with you shortly.");
+  L.push("", "After paying, please share the payment screenshot in this chat. We will confirm your order once the payment is checked.");
+  const site = location.origin + location.pathname.replace(/admin\/[^/]*$/, "");
+  L.push("", `Track your order: ${site}#track=${encodeURIComponent(o.no)}`);
+  return L.join("\n");
+}
 function renderStats() {
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
   $("stCount").textContent = ORDERS.filter(o => o.status !== "cancel").length;
@@ -259,6 +270,7 @@ function renderOrders() {
     <div class="ofoot">
       <select data-st="${esc(o.no)}" aria-label="Status">${STATUS.map(([k, l]) => `<option value="${k}"${k === o.status ? " selected" : ""}>${l}</option>`).join("")}</select>
       ${o.phone ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+      ${o.phone && o.status === "new" && o.adv ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(paymentText(o))}" target="_blank" rel="noopener">Send payment details</a>` : ""}
       <button class="sm red" data-odel="${esc(o.no)}">Delete</button>
     </div></div>`).join("")
     : `<div class="empty-box">${ORDERS.length ? "No orders match this filter." : "No orders saved yet. When an order arrives on WhatsApp, paste the message above and save it."}</div>`;
@@ -323,6 +335,10 @@ async function loadContent() {
   const sha = ref.object.sha;
   const raw = await gh(`${SITE}/contents/data/shop.json?ref=${sha}`, {raw: true});
   S = normalizeShop(JSON.parse(raw)); baseSha = sha; loadedImgs = imgPaths(S);
+  if (!Array.isArray(S.pay.accounts)) { const p = S.pay;
+    S.pay = {accounts: [{method: "JazzCash", title: p.jazzName || "", number: p.jazz || ""}, {method: "Easypaisa", title: p.easyName || "", number: p.easy || ""},
+      {method: "MCB Bank", title: "", number: ""}, {method: "Meezan Bank", title: "", number: ""}]};
+    if (p.iban) S.pay.accounts.push({method: PAY_METHODS.includes(p.bank) ? p.bank : "Other bank", title: p.bankName || "", number: p.iban}) }
   $("pEditor").hidden = true; editing = null; pending = null;
   setClean(); fillBinds(); renderList();
 }
@@ -414,7 +430,7 @@ M.addEventListener("change", async e => {
 M.addEventListener("click", e => {
   const rm = e.target.closest("[data-phrm]"), la = e.target.closest("[data-ladd]"), ld = e.target.closest("[data-ldel]"), gd = e.target.closest("[data-gdel]");
   if (rm) { setPath(S, rm.dataset.phrm, ""); fillThumbs(); changed() }
-  if (la) { const arr = getPath(S, la.dataset.ladd); arr.push({}); renderLists(); changed() }
+  if (la) { let arr = getPath(S, la.dataset.ladd); if (!arr) { setPath(S, la.dataset.ladd, []); arr = getPath(S, la.dataset.ladd) } arr.push(la.dataset.ladd === "pay.accounts" ? {method: "Other bank"} : {}); renderLists(); changed() }
   if (ld) { const [path, i] = ld.dataset.ldel.split("|"); getPath(S, path).splice(+i, 1); renderLists(); changed() }
   if (gd) { S.gallery.splice(+gd.dataset.gdel, 1); renderGalEd(); changed() }
 });
@@ -432,10 +448,12 @@ function renderSlideEd() {
   $("slideEd").querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); el.value = v == null ? (el.tagName === "SELECT" ? "all" : "") : v });
   fillThumbs();
 }
-const LISTS = {reviews: [["name", "Name"], ["city", "City"], ["text", "Review"]], addons: [["name", "Add-on name"], ["price", "Price (Rs, 0 = free)", "n"]]};
+const LISTS = {reviews: [["name", "Name"], ["city", "City"], ["text", "Review"]], addons: [["name", "Add-on name"], ["price", "Price (Rs, 0 = free)", "n"]],
+  "pay.accounts": [["method", "Bank / wallet", "s"], ["title", "Account title"], ["number", "Account number / IBAN"]]};
 function renderLists() {
   M.querySelectorAll("[data-list]").forEach(box => { const path = box.dataset.list, arr = getPath(S, path) || [], fs = LISTS[path];
-    box.innerHTML = arr.length ? arr.map((it, i) => `<div class="lrow" style="--n:${fs.length}">${fs.map(([k, l, t]) => `<label class="fld" for="li_${path}_${i}_${k}">${l}<input id="li_${path}_${i}_${k}" ${t === "n" ? 'type="number" min="0" step="10"' : ""} data-li="${path}|${i}|${k}|${t === "n" ? 1 : ""}" value="${esc(it[k] ?? "")}"></label>`).join("")}<button class="sm red" type="button" data-ldel="${path}|${i}" aria-label="Remove">×</button></div>`).join("")
+    box.innerHTML = arr.length ? arr.map((it, i) => `<div class="lrow" style="--n:${fs.length}">${fs.map(([k, l, t]) => { const id = `li_${path.replace(/\./g, "_")}_${i}_${k}`, li = `${path}|${i}|${k}|${t === "n" ? 1 : ""}`;
+      return `<label class="fld" for="${id}">${l}${t === "s" ? `<select id="${id}" data-li="${li}">${PAY_METHODS.map(m => `<option${m === it[k] ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>` : `<input id="${id}" ${t === "n" ? 'type="number" min="0" step="10"' : ""} data-li="${li}" value="${esc(it[k] ?? "")}">`}</label>` }).join("")}<button class="sm red" type="button" data-ldel="${path}|${i}" aria-label="Remove">×</button></div>`).join("")
       : `<p class="hint">Nothing added yet.</p>` });
 }
 function renderGalEd() {

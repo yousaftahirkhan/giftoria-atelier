@@ -262,20 +262,9 @@
       </div>
       <div class="box">
         <h3>Payment accounts</h3>
-        <p class="hint">Blank accounts are not shown to customers.</p>
-        <div class="two">
-          <label class="fld" for="y-j">JazzCash number<input id="y-j" data-b="pay.jazz" inputmode="tel"></label>
-          <label class="fld" for="y-jn">JazzCash account title<input id="y-jn" data-b="pay.jazzName"></label>
-        </div>
-        <div class="two">
-          <label class="fld" for="y-e">Easypaisa number<input id="y-e" data-b="pay.easy" inputmode="tel"></label>
-          <label class="fld" for="y-en">Easypaisa account title<input id="y-en" data-b="pay.easyName"></label>
-        </div>
-        <div class="three">
-          <label class="fld" for="y-b">Bank name<input id="y-b" data-b="pay.bank"></label>
-          <label class="fld" for="y-bn">Account title<input id="y-bn" data-b="pay.bankName"></label>
-          <label class="fld" for="y-i">Account no. / IBAN<input id="y-i" data-b="pay.iban"></label>
-        </div>
+        <p class="hint">Customers see these after placing an order, and they are added to the order's WhatsApp message. Rows without an account number are not shown.</p>
+        <div data-list="pay.accounts"></div>
+        <button class="sm" type="button" data-ladd="pay.accounts" style="align-self:start">+ Add account</button>
       </div>
       <div class="box">
         <h3>Add-ons (shown in the cart)</h3>
