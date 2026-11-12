@@ -24,12 +24,20 @@
       <h1>Sign in to manage the shop</h1>
       <p class="hint" style="margin-top:6px">Orders, products, homepage, business details and payments are managed here. Customers never see this page.</p>
     </div>
-    <form class="form" id="signinForm" autocomplete="off">
-      <label for="tok">GitHub access token<input id="tok" type="password" spellcheck="false" autocapitalize="off" placeholder="github_pat_…" required></label>
+    <div class="form" id="ghSignin">
+      <button class="btn dark block" type="button" id="ghBtn"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Sign in with GitHub</button>
+      <p class="hint" style="text-align:center">GitHub asks for your password and authenticator code. You stay signed in for 8 hours.</p>
+      <div class="msg err" id="ghMsg" role="alert"></div>
+    </div>
+    <details class="help" id="tokenBox">
+      <summary>Use an access token instead</summary>
+    <form class="form" id="signinForm" autocomplete="off" style="margin-top:12px">
+      <label for="tok">GitHub access token<input id="tok" type="password" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="github_pat_…" required></label>
       <label class="toggle" for="remember"><input type="checkbox" id="remember" checked> Keep me signed in on this device</label>
-      <button class="btn rose block" type="submit" id="signBtn">Sign in</button>
+      <button class="btn rose block" type="submit" id="signBtn">Sign in with token</button>
       <div class="msg err" id="signMsg" role="alert"></div>
     </form>
+    </details>
     <details class="help">
       <summary>How to get an access token</summary>
       <ol>

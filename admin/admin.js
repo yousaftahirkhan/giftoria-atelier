@@ -33,7 +33,7 @@ async function gh(path, {method = "GET", body, raw} = {}) {
 function errText(e) {
   if (!e || e.status == null) return "Something went wrong. Please try again.";
   if (e.status === 0) return e.message;
-  if (e.status === 401) return "The access token is not valid or has expired. Sign out and sign in with a new token.";
+  if (e.status === 401) return "Your sign-in has expired or is not valid. Sign out and sign in again.";
   if (e.status === 403) return /rate limit/i.test(e.message) ? "GitHub is busy. Please wait a minute and try again." : "This token is not allowed to make changes. On GitHub, set the token's Contents permission to Read and write.";
   if (e.status === 404) return "The shop's repository could not be opened with this token. Check the token's repository access.";
   if (e.status === 409 || e.status === 422) return "Another change was saved at the same time. Please try again.";
@@ -42,14 +42,22 @@ function errText(e) {
 function b64encUtf8(str) { const bytes = new TextEncoder().encode(str); let bin = ""; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin) }
 function b64decUtf8(b64) { const bin = atob(String(b64).replace(/\s/g, "")); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes) }
 
-/* ---------- sign in / out ---------- */
-const storedToken = () => { try { return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || "" } catch (e) { return "" } };
-const dropToken = () => { try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY) } catch (e) {} };
-const keepToken = (t, remember) => { dropToken(); try { (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, t) } catch (e) {} };
+/* ---------- sign in / out ----------
+   Main route: "Sign in with GitHub". GitHub checks the password and authenticator code, the sign-in service
+   (auth-worker/) swaps GitHub's one-time code for an 8-hour token and sends it back here in the URL fragment.
+   Fallback: a fine-grained access token pasted into the form. */
+const EXP_KEY = "ga-admin-exp", STATE_KEY = "ga-oauth-state";
+const ADMINS = (CFG.admins || [GH_OWNER]).map(s => String(s).toLowerCase());
+const store = k => { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || "" } catch (e) { return "" } };
+const storedToken = () => { const exp = +store(EXP_KEY); if (exp && Date.now() > exp) { dropToken(); return "" } return store(TOKEN_KEY) };
+const dropToken = () => { try { [TOKEN_KEY, EXP_KEY].forEach(k => { localStorage.removeItem(k); sessionStorage.removeItem(k) }) } catch (e) {} };
+const keepToken = (t, remember, expiresAt) => { dropToken(); try { const s = remember ? localStorage : sessionStorage; s.setItem(TOKEN_KEY, t); if (expiresAt) s.setItem(EXP_KEY, String(expiresAt)) } catch (e) {} };
 let ORDERS_OK = false;
 
 async function signIn(t) {
   TOKEN = t;
+  const me = await gh("/user");
+  if (!ADMINS.includes(String(me.login).toLowerCase())) { const e = new GHError(403, "not admin"); e.notAdmin = me.login; throw e }
   await gh(SITE);
   try { await gh(ORD); ORDERS_OK = true } catch (e) { ORDERS_OK = false }
   await loadContent();
@@ -57,9 +65,28 @@ async function signIn(t) {
   const h = location.hash.slice(1); selectTab(TABS.includes(h) ? h : "orders");
   loadOrders();
 }
+const signInError = e => e && e.notAdmin ? `The GitHub account ${e.notAdmin} is not allowed to manage this shop.` : e && e.status === 401 ? "Your sign-in has expired. Please sign in again." : errText(e);
 function showSignin(msg) {
   TOKEN = ""; $("booting").hidden = true; $("app").hidden = true; $("signin").hidden = false;
-  $("signMsg").textContent = msg || ""; $("tok").value = ""; $("tok").focus();
+  $("ghMsg").textContent = msg || ""; $("signMsg").textContent = ""; $("tok").value = "";
+  if (!CFG.githubAppClientId || !CFG.authUrl) { $("ghSignin").hidden = true; $("tokenBox").open = true }
+}
+$("ghBtn").onclick = () => {
+  const state = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, "0")).join("");
+  try { sessionStorage.setItem(STATE_KEY, state) } catch (e) {}
+  $("ghBtn").disabled = true; $("ghMsg").textContent = "";
+  location.href = "https://github.com/login/oauth/authorize?" + new URLSearchParams({client_id: CFG.githubAppClientId, redirect_uri: CFG.authUrl.replace(/\/$/, "") + "/callback", state});
+};
+/* Reads the sign-in result the service put in the URL fragment, then removes it from the address bar. */
+function takeAuthReturn() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.has("token") && !h.has("auth_error")) return null;
+  history.replaceState(null, "", location.pathname);
+  let expected = ""; try { expected = sessionStorage.getItem(STATE_KEY) || ""; sessionStorage.removeItem(STATE_KEY) } catch (e) {}
+  if (!expected || h.get("state") !== expected) return {error: "Sign-in could not be confirmed. Please try again."};
+  const err = h.get("auth_error");
+  if (err) return {error: err === "denied" ? "Sign-in was cancelled." : err === "not_allowed" ? "This GitHub account is not allowed to manage this shop." : "Sign-in did not complete. Please try again."};
+  return {token: h.get("token"), expiresAt: Date.now() + (Math.max(60, +h.get("expires_in") || 28800) - 60) * 1000};
 }
 $("signinForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -67,12 +94,12 @@ $("signinForm").addEventListener("submit", async e => {
   if (!t) { $("signMsg").textContent = "Paste your access token."; return }
   $("signBtn").disabled = true; $("signBtn").textContent = "Signing in…"; $("signMsg").textContent = "";
   try { await signIn(t); keepToken(t, $("remember").checked) }
-  catch (err) { TOKEN = ""; $("signMsg").textContent = errText(err) }
-  finally { $("signBtn").disabled = false; $("signBtn").textContent = "Sign in" }
+  catch (err) { TOKEN = ""; $("signMsg").textContent = err && err.status === 401 ? "This access token is not valid or has expired. Check it and try again." : signInError(err) }
+  finally { $("signBtn").disabled = false; $("signBtn").textContent = "Sign in with token" }
 });
 $("signOut").onclick = () => {
   if (dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
-  dirty = false; dropToken(); location.hash = ""; location.reload();
+  dirty = false; dropToken(); history.replaceState(null, "", location.pathname); location.reload();
 };
 
 /* ---------- tabs ---------- */
@@ -397,8 +424,11 @@ $("pSave").onclick = () => {
 
 /* ---------- start ---------- */
 (async () => {
+  const ret = takeAuthReturn();
+  if (ret && ret.error) { showSignin(ret.error); return }
+  if (ret && ret.token) keepToken(ret.token, true, ret.expiresAt);
   const t = storedToken();
   if (!t) { showSignin(); return }
   try { await signIn(t) }
-  catch (e) { if (e.status === 401) dropToken(); showSignin(errText(e)) }
+  catch (e) { if (e.status === 401 || e.notAdmin) dropToken(); showSignin(signInError(e)) }
 })();

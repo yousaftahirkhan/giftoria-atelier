@@ -1,0 +1,9 @@
+name = "giftoria-auth"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+workers_dev = true
+
+[vars]
+ADMIN_URL = "https://yousaftahirkhan.github.io/giftoria-atelier/admin/"
+ALLOWED_USERS = "yousaftahirkhan"
+GITHUB_CLIENT_ID = "Iv23lih9733oMDWePRSR"
