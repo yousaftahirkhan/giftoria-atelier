@@ -61,11 +61,9 @@ const DEFAULT_ART={bouquet:{kind:"bouquet",shape:"mix",colors:["#F7B5CD","#C7B2F
   choco:{kind:"bouquet",shape:"mix",colors:["#F7B5CD","#C7B2F0","#FFFFFF","#F7B5CD"],wrap:"#FBE3EC"},pots:{kind:"bouquet",shape:"tulip",colors:["#F28AB2","#F7B5CD","#F9C59A"],wrap:"#FFFFFF"},
   hair:{kind:"key",shape:"daisy",colors:["#F7B5CD"]},decor:{kind:"gajra",colors:["#FFFFFF","#F28AB2"]}};
 function drawArt(a){a=a||DEFAULT_ART.bouquet;return a.kind==="box"?boxSVG(a):a.kind==="gajra"?gajraSVG(a):a.kind==="bouquet"?bouquetSVG(a):keySVG(a)}
-/* Monogram Seal: a fine double ring with the initials and a small tulip. */
-const LOGO=`<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#FFFFFF" stroke="var(--emerald)" stroke-width="2.4"/><circle cx="32" cy="32" r="24.5" fill="none" stroke="var(--emerald)" stroke-width="1"/>
-<path d="M27.5 15.4C27.5 20 29.3 22.5 32 22.5S36.5 20 36.5 15.4L34.3 17.3 32 13 29.7 17.3Z" fill="#D9A3B3"/><path d="M32 13 34.3 17.3C34 20.3 33 22.3 32 22.5 31 22.3 30 20.3 29.7 17.3Z" fill="#9C4F66" opacity=".45"/>
-<text x="32" y="45" text-anchor="middle" font-family="Marcellus,Georgia,serif" font-size="21" letter-spacing="1" fill="var(--emerald)">GA</text></svg>`;
-/* The shop name as a two-line wordmark: first word large, the rest small and spaced. */
+/* Signature Stem: a single tulip on a long stem (leaf colour can be lightened on dark backgrounds with --logo-leaf). */
+const LOGO=`<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 61c0-13-3-22 1-33" fill="none" stroke="var(--logo-leaf,var(--emerald))" stroke-width="2.8" stroke-linecap="round"/><path d="M31.5 50c-5-5-11-4-13-1 4 4 9 4 13 1z" fill="var(--logo-leaf,var(--emerald))"/><path d="M32.4 42c4-5 10-5 12-2-4 4-8 4-12 2z" fill="var(--logo-leaf,var(--emerald))"/><path d="M23 11.75C23 24.4 28 29 33 29S43 24.4 43 11.75L38 16.35 33 6 28 16.35Z" fill="#B8738A"/><path d="M33 6 38 16.35C37 24.4 35 28 33 29 31 28 29 24.4 28 16.35Z" fill="#9C4F66" opacity=".6"/></svg>`;
+/* The shop name as a two-line wordmark: first word in script, the rest small and spaced. */
 const wordmark=name=>{const n=String(name||"Shop").trim(),i=n.indexOf(" ");return i<0?esc(n):`${esc(n.slice(0,i))}<span class="w2">${esc(n.slice(i+1))}</span>`};
 
 /* ---------- formatting ---------- */

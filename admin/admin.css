@@ -98,5 +98,6 @@ body{background:var(--bg)}
 .cancel-info{font-size:14px;color:var(--rose);font-weight:700}
 .cancel-box{border:1.5px solid var(--rose);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .src.urgent{background:#FDE2E2;color:#B42318}
-.atop .logo b{font-size:18px}
-.scard .logo b{font-size:20px}
+.atop{--logo-leaf:#A9C9B4}
+.atop .logo b{font-size:28px}
+.scard .logo b{font-size:34px}
