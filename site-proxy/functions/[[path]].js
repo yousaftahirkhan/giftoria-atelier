@@ -1,16 +1,13 @@
 /* Giftoria Atelier: serves the shop at https://giftoria-atelier.pages.dev.
 
    Every request is forwarded to the website on GitHub Pages, so anything published from the super admin appears here
-   straight away and there is nothing to redeploy. The super admin itself stays on GitHub Pages (its Google sign-in is
-   tied to that address), so /admin is sent there. */
+   straight away and there is nothing to redeploy. The super admin is served here too, at /admin/. */
 
 const ORIGIN = "https://yousaftahirkhan.github.io/giftoria-atelier";
-const ADMIN = ORIGIN + "/admin/";
 const DROP = ["x-github-request-id", "x-fastly-request-id", "x-served-by", "x-cache", "x-cache-hits", "x-timer", "via", "content-length", "access-control-allow-origin"];
 
 export async function onRequest({request}) {
   const url = new URL(request.url);
-  if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return Response.redirect(ADMIN, 302);
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", {status: 405, headers: {Allow: "GET, HEAD"}});
 
   const upstream = await fetch(ORIGIN + url.pathname + url.search, {

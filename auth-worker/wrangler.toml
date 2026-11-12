@@ -6,8 +6,8 @@ workers_dev = true
 # Secrets (set with `npx wrangler secret put NAME`, never stored here):
 #   GITHUB_CLIENT_SECRET, GITHUB_APP_PRIVATE_KEY (PKCS#8), TOTP_SECRET, SESSION_SECRET, ALLOWED_EMAILS
 [vars]
-ADMIN_URL = "https://yousaftahirkhan.github.io/giftoria-atelier/admin/"
-SITE_ORIGINS = "https://giftoria-atelier.pages.dev"
+ADMIN_URL = "https://giftoria-atelier.pages.dev/admin/"
+SITE_ORIGINS = "https://yousaftahirkhan.github.io"
 ALLOWED_USERS = "yousaftahirkhan"
 REPO_OWNER = "yousaftahirkhan"
 SITE_REPO = "giftoria-atelier"
