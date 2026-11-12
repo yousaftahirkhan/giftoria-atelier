@@ -16,7 +16,8 @@ To redeploy it: `cd site-proxy && npx wrangler pages deploy public --project-nam
 ## How it works
 
 - **Shop content** lives in `data/shop.json` and product photos in `images/`. The storefront reads these files; it cannot change them.
-- **The super admin** signs in with GitHub (password and authenticator code). Selecting *Publish changes* saves one commit to this repository, and GitHub Pages updates the website within about a minute.
+- **The super admin** signs in with Google plus an authenticator code (see below). Selecting *Publish changes* saves one commit to this repository, and the website updates within about a minute.
+- **Website orders** are sent by the storefront to the order service (`auth-worker/`, `POST /order`), which saves them for the super admin.
 - **Orders** are saved in `orders.json` in the separate private repository `giftoria-orders`, so customer names, phone numbers and addresses are never public.
 
 ## Order flow
