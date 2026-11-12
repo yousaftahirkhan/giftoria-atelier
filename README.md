@@ -6,8 +6,12 @@ The site has two separate parts:
 
 | Part | Address | Who uses it |
 |---|---|---|
-| Storefront | `/` | Customers browse products, fill the cart and place the order on WhatsApp. |
-| Super admin | `/admin/` | The owner manages orders, products, homepage, business details and payments. |
+| Storefront | https://giftoria-atelier.pages.dev/ (also `/` on GitHub Pages) | Customers browse products, fill the cart and place the order on WhatsApp. |
+| Super admin | https://yousaftahirkhan.github.io/giftoria-atelier/admin/ | The owner manages orders, products, homepage, business details and payments. |
+
+The pages.dev address is a Cloudflare Pages project (`site-proxy/`) that forwards every request to GitHub Pages, so anything
+published from the super admin appears there at once. It sends `/admin` to the GitHub Pages address, where the sign-in lives.
+To redeploy it: `cd site-proxy && npx wrangler pages deploy public --project-name giftoria-atelier --branch main`.
 
 ## How it works
 
@@ -42,7 +46,8 @@ To redeploy the sign-in service: `cd auth-worker && npx wrangler deploy`.
 index.html          storefront
 assets/             shared styles and scripts (base.css, common.js) and storefront code
 admin/              super admin (index.html, admin.js, admin.css, config.js)
-auth-worker/        sign-in service for "Sign in with GitHub" (Cloudflare Worker)
+auth-worker/        sign-in and order service (Cloudflare Worker)
+site-proxy/         the giftoria-atelier.pages.dev address (Cloudflare Pages function)
 data/shop.json      shop content
 images/             product and site photos
 ```
