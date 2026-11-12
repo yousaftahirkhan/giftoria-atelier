@@ -188,7 +188,7 @@ footer button.fl:hover{opacity:1;text-decoration:underline}
 .qty .rm:hover{background:var(--blush)}
 
 /* ===== design pass: header, menu, categories, how-to, cards ===== */
-header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px);box-shadow:0 1px 0 var(--line),0 6px 24px rgba(26,36,51,.04);border-bottom:0}
+header.top{background:rgba(250,247,246,.92);-webkit-backdrop-filter:saturate(1.4) blur(10px);backdrop-filter:saturate(1.4) blur(10px);box-shadow:0 1px 0 var(--line),0 6px 24px rgba(42,28,33,.04);border-bottom:0}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .menu-btn{display:none}
 .nav{align-items:center}
@@ -199,7 +199,7 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
 .nav a:hover::after{right:0}
 .ib{transition:border-color .15s,background .15s}
 .ib:hover{border-color:var(--rose);background:var(--blush)}
-.mega{position:absolute;left:0;right:0;top:100%;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 24px 48px rgba(26,36,51,.14)}
+.mega{position:absolute;left:0;right:0;top:100%;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 24px 48px rgba(42,28,33,.14)}
 .mega-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding-block:20px}
 .mega-tile{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border:0;background:none;padding:8px;border-radius:16px;text-decoration:none;color:var(--ink);cursor:pointer}
 .mega-tile:hover{background:var(--bg)}
@@ -212,7 +212,7 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
 
 .cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
 .cattile{position:relative;display:flex;flex-direction:column;border:1px solid var(--line);background:var(--surface);border-radius:20px;overflow:hidden;padding:0;text-align:left;text-decoration:none;color:var(--ink);cursor:pointer;transition:transform .18s,box-shadow .18s}
-.cattile:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(26,36,51,.12)}
+.cattile:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(42,28,33,.12)}
 .cattile .ph{aspect-ratio:4/3;background:var(--blush);display:grid;place-items:center;position:relative;overflow:hidden}
 .cattile .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .cattile:hover .ph img{transform:scale(1.06)}
@@ -220,7 +220,7 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
 .cattile .cap{padding:12px 14px 14px;display:flex;flex-direction:column;gap:2px}
 .cattile .cap b{font-size:16px}
 .cattile .cap span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
-.cattile.custom .ph{background:linear-gradient(135deg,var(--blush),#DDE6FB);color:var(--rose)}
+.cattile.custom .ph{background:linear-gradient(135deg,var(--blush),#EFE4E6);color:var(--rose)}
 .cattile.custom .ph svg{width:44px;height:44px}
 
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;counter-reset:s}
@@ -231,7 +231,7 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
 .steps .n{position:absolute;top:14px;right:16px;font-family:var(--display);font-size:28px;color:var(--line);line-height:1}
 
 .card{transition:transform .18s,box-shadow .18s}
-.card:hover{box-shadow:0 14px 30px rgba(26,36,51,.10)}
+.card:hover{box-shadow:0 14px 30px rgba(42,28,33,.10)}
 .pic img{transition:transform .5s}
 .card:hover .pic img{transform:scale(1.05)}
 .add{background:var(--rose);color:var(--rose-ink);transition:filter .15s}
@@ -277,8 +277,8 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
 }
 @media (min-width:901px){.rail{display:none}.bar{padding-block:14px}}
 /* View cart button: compact navy pill with a count badge */
-.cart-float{gap:8px;padding:8px 14px 8px 10px;font-size:13.5px;font-weight:800;background:var(--ink);color:#fff;border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 22px rgba(26,36,51,.28);bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-.cart-float:hover{background:#243247}
+.cart-float{gap:8px;padding:8px 14px 8px 10px;font-size:13.5px;font-weight:800;background:var(--ink);color:#fff;border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 22px rgba(42,28,33,.28);bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+.cart-float:hover{background:#3A2E32}
 .cart-float svg{width:16px;height:16px;flex:none}
 .cart-float #cartFloatTxt{display:flex;align-items:center;gap:8px;overflow:visible}
 .cart-float .cf-n{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--rose);color:#fff;font-size:11.5px;line-height:1;font-variant-numeric:tabular-nums}
@@ -300,3 +300,8 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
   .cart-float,.wa-float{width:52px;height:52px;padding:0;border-radius:50%}
   .cart-float .cf-n{left:27px;top:8px}
 }
+/* GIFTORIA / ATELIER wordmark */
+header.top .logo b{font-size:21px}
+footer .logo b{font-size:20px;color:var(--bg)}
+footer .logo svg circle:first-child{fill:#FFFFFF}
+@media (max-width:460px){header.top .logo b{font-size:17px;letter-spacing:.14em}header.top .logo b .w2{font-size:8.5px;letter-spacing:.55em}.logo svg{width:34px;height:34px}}

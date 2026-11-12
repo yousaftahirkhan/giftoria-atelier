@@ -476,7 +476,7 @@ function warns() {
   const r = S.reg || {}; $("regWarn").hidden = !!(r.business || r.regNo || r.ntn);
   $("payWarn").hidden = !(+S.shop.advancePct) || payAccounts(S).length > 0;
   $("exampleNote").hidden = !S.products.some(p => p.sample || (!p.photo && p.art));
-  $("shopName").textContent = S.shop.name || "Shop";
+  $("shopName").innerHTML = wordmark(S.shop.name);
 }
 $("areasBox").addEventListener("input", () => { S.shop.areas = [...new Set($("areasBox").value.split("\n").map(a => a.trim()).filter(Boolean))]; changed() });
 function fillBinds() { $("areasBox").value = shopAreas(S).join("\n"); M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); warns() }

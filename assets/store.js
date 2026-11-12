@@ -137,7 +137,7 @@ function renderChrome(){
   const s=S.shop,pct=+s.advancePct||0;
   document.title=(s.name||"Shop")+" | Handmade flowers and gifts";
   $("announce").textContent=s.announce||"";$("announce").parentElement.hidden=!s.announce;
-  $("shopName").textContent=s.name||"Shop";$("footName").textContent=s.name||"";
+  $("shopName").innerHTML=wordmark(s.name);$("footName").innerHTML=wordmark(s.name);
   $("footAbout").textContent=s.footAbout||"";
   $("trustDelT").textContent="Delivery across "+(s.city||"Multan");
   {const cur=$("fArea").value||load("gd-cust",{}).fArea||"";
