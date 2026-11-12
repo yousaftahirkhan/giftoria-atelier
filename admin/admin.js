@@ -270,12 +270,16 @@ function renderStats() {
   $("stPending").textContent = ORDERS.filter(o => o.status === "new").length;
   $("stMonth").textContent = rs(ORDERS.filter(o => { const d = new Date(o.at); return o.status !== "cancel" && d.getMonth() === m && d.getFullYear() === y }).reduce((s, o) => s + (o.tot || 0), 0));
 }
+function renderFilterCounts() {
+  const n = k => ORDERS.filter(o => k === "all" || (k === "open" ? !["done", "cancel"].includes(o.status) : o.status === k)).length;
+  $("oFilter").querySelectorAll("[data-f]").forEach(b => { const k = b.dataset.f; b.textContent = `${FILTERS.find(f => f[0] === k)[1]} (${n(k)})` });
+}
 function renderOrders() {
-  renderStats();
+  renderStats(); renderFilterCounts();
   ORDERS.sort((a, b) => (b.at || 0) - (a.at || 0));
-  const q = $("oSearch").value.trim().toLowerCase();
-  const list = ORDERS.filter(o => oFilter === "all" || (oFilter === "open" ? !["done", "cancel"].includes(o.status) : o.status === oFilter))
-    .filter(o => !q || [o.no, o.name, o.phone, o.city].join(" ").toLowerCase().includes(q));
+  const q = $("oSearch").value.trim().toLowerCase(), qd = q.replace(/\D/g, "");
+  const list = (q ? ORDERS : ORDERS.filter(o => oFilter === "all" || (oFilter === "open" ? !["done", "cancel"].includes(o.status) : o.status === oFilter)))
+    .filter(o => !q || [o.no, o.name, o.phone, o.city].join(" ").toLowerCase().includes(q) || (qd.length >= 4 && String(o.phone).replace(/\D/g, "").includes(qd)));
   $("oList").innerHTML = list.length ? list.map(o => `<div class="ocard" data-s="${esc(o.status)}">
     <div class="ohead"><span class="no">${esc(o.no)}${o.source === "website" ? ` <span class="src">Website</span>` : ""}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK", {day: "numeric", month: "short"})}${o.needTxt ? " · needed by " + esc(o.needTxt) : ""}</span></div>
     <div><b>${esc(o.name || "—")}</b> <span class="sub">· ${esc(o.phone)} · ${esc(o.city)}</span></div>
@@ -291,7 +295,7 @@ function renderOrders() {
       ${o.phone && o.status !== "new" ? `<a class="sm green" href="${statusLink(o, o.status)}" target="_blank" rel="noopener">Send update: ${esc(STATUS_LBL[o.status])}</a>` : ""}
       <button class="sm red" data-odel="${esc(o.no)}">Delete</button>
     </div></div>`).join("")
-    : `<div class="empty-box">${ORDERS.length ? "No orders match this filter." : "No orders saved yet. When an order arrives on WhatsApp, paste the message above and save it."}</div>`;
+    : `<div class="empty-box">${q ? "No order found for this tracking ID, name or phone number. If the customer ordered on WhatsApp only, add it with the box at the bottom." : ORDERS.length ? "No orders with this status." : "No orders yet. Orders placed on the website appear here automatically."}</div>`;
 }
 $("oList").addEventListener("change", async e => {
   const s = e.target.closest("[data-st]"); if (!s) return; const no = s.dataset.st, st = s.value;

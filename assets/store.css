@@ -185,3 +185,5 @@ footer button.fl:hover{opacity:1;text-decoration:underline}
 .ostatus{font-size:14px;border-radius:10px;padding:6px 10px;background:var(--blush)}
 .ostatus[data-s="paid"],.ostatus[data-s="making"],.ostatus[data-s="sent"],.ostatus[data-s="done"]{background:#E3F2EC;color:#1D6F4A}
 .trackbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.cart-float{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:7;display:flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 18px;background:var(--rose);color:var(--rose-ink);font-weight:800;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;max-width:calc(100% - 120px)}
+.cart-float span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

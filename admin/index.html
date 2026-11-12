@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css">
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="../assets/base.css?v=v3b9c075">
+<link rel="stylesheet" href="admin.css?v=v3b9c075">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -98,23 +98,23 @@
         <button class="sm" type="button" id="oRefresh">Refresh</button>
       </div>
       <input id="oSearch" type="search" placeholder="Search by name, phone or order number">
-      <div class="stats">
+      <div class="stats" id="statsRow">
         <div class="stat"><div class="k">Total orders</div><div class="v" id="stCount">0</div></div>
         <div class="stat"><div class="k">Awaiting payment</div><div class="v" id="stPending">0</div></div>
         <div class="stat"><div class="k">Sales this month</div><div class="v" id="stMonth">Rs 0</div></div>
       </div>
       <div class="banner warn" id="ordersOff" hidden>Order storage is not connected. Create a new access token that also includes the <b id="ordersRepoName">giftoria-orders</b> repository, then sign in again.</div>
-      <div class="box">
-        <h3>Add an order from WhatsApp</h3>
+      </div>
+      <div id="oList" class="olist"></div>
+      <details class="box" id="pasteWrap">
+        <summary><b>Add an order that came only on WhatsApp</b></summary>
         <p class="hint">Website orders appear below automatically. For an order that came only on WhatsApp, copy the customer's full message and paste it here. The name, phone, items and amounts fill in automatically.</p>
         <textarea id="pasteBox" rows="4" placeholder="New Order — GA-1112-482 …"></textarea>
         <div id="pastePreview"></div>
         <div class="two">
           <button class="btn dark" type="button" id="pasteRead">Read message</button>
           <button class="btn rose" type="button" id="pasteSave" disabled>Save order</button>
-        </div>
-      </div>
-      <div id="oList" class="olist"></div>
+        </details>
     </div>
 
     <!-- Products -->
@@ -286,8 +286,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js"></script>
-<script src="config.js"></script>
-<script src="admin.js"></script>
+<script src="../assets/common.js?v=v3b9c075"></script>
+<script src="config.js?v=v3b9c075"></script>
+<script src="admin.js?v=v3b9c075"></script>
 </body>
 </html>

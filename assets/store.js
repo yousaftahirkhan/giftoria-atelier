@@ -190,6 +190,7 @@ function totals(){
 function renderCart(){
   cleanCart();const ids=Object.keys(cart);const n=ids.reduce((s,id)=>s+cart[id],0);
   $("cartCount").textContent=n;$("cartCount").hidden=!n;
+  $("cartFloat").hidden=!n;$("cartFloatTxt").textContent=`View cart (${n}) · ${rs(ids.reduce((s,id)=>s+(findP(id)?.price||0)*cart[id],0))}`;
   $("lines").innerHTML=ids.length?ids.map(id=>{const p=findP(id);return `<div class="line"><div class="mini">${visual(p,"")}</div>
     <div><div class="nm">${esc(p.name)}</div><div class="sub">${rs(p.price)} each</div></div>
     <div class="qty"><button data-d="-1" data-id="${esc(id)}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-d="1" data-id="${esc(id)}" aria-label="Increase">+</button></div></div>`}).join("")
@@ -335,6 +336,7 @@ $("trackForm").addEventListener("submit",async e=>{
 let openPanel=null;
 function show(panel){if(openPanel)openPanel.hidden=true;openPanel=panel;$("scrim").hidden=!panel;if(panel){panel.hidden=false;const c=panel.querySelector("[data-close]");if(c)c.focus()}}
 $("openCart").onclick=()=>show($("drawer"));
+$("cartFloat").onclick=()=>show($("drawer"));
 $("openWish").onclick=()=>show($("wishDrawer"));
 $("openOrders").onclick=()=>{show($("ordersDrawer"));trackOrders()};
 $("openSearch").onclick=()=>{show(null);$("shop").scrollIntoView({behavior:"smooth"});setTimeout(()=>$("q").focus(),400)};
