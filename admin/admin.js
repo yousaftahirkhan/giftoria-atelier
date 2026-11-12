@@ -243,7 +243,7 @@ function statusText(o, status) {
   const T = {
     paid: [`${hi} we have received your payment${o.adv ? " of " + rs(o.adv) : ""}. Thank you!`, "", `*Your order is confirmed.* ${id}`, bal, "", "We have started making your order by hand and will update you when it is out for delivery."],
     making: [`${hi} your order is now being made by hand.`, "", id, "We will message you as soon as it is out for delivery."],
-    sent: [`${hi} your order is *out for delivery* by inDrive.`, "", id,
+    sent: [`${hi} good news! *Your order is ready* and has been handed to our inDrive rider. It is on its way to you.`, "", id,
       ...(o.rider ? ["", "*Rider details*", `Name: ${o.rider.name}`, `Phone: ${o.rider.phone}`, ...(o.rider.vehicle ? [`Vehicle: ${o.rider.vehicle}`] : []), ""] : []),
       o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you."],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
