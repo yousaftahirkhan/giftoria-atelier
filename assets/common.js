@@ -89,9 +89,8 @@ function payAccounts(S){const p=S.pay||{};
   const a=[];if(p.jazz)a.push({k:"JazzCash",v:p.jazz,who:p.jazzName});if(p.easy)a.push({k:"Easypaisa",v:p.easy,who:p.easyName});
   if(p.iban)a.push({k:p.bank||"Bank transfer",v:p.iban,who:p.bankName});return a}
 
-/* Tracking IDs look like GA-261112-K7Q4: shop initials, order date (YYMMDD) and four random characters
+/* Order IDs look like GA-261112-K7Q4: shop initials, order date (YYMMDD) and four random characters
    without look-alikes (no O/0, I/1, L), so customers can read them out on a call. */
-const ORDER_NO_RE=/^[A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4})$/;
 function makeOrderNo(shopName){
   const ini=(shopName||"").split(/\s+/).map(w=>w[0]||"").join("").replace(/[^A-Za-z]/g,"").slice(0,3).toUpperCase()||"OR";
   const d=new Date(),p=n=>String(n).padStart(2,"0");

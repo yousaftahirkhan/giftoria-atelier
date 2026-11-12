@@ -1,7 +1,7 @@
 /* Storefront: customers browse, add to cart and place the order on WhatsApp. Nothing here edits the shop;
    all content comes from data/shop.json, which the super admin (admin/) publishes. */
 "use strict";
-/* The shop's sign-in service also receives orders (saved privately for the super admin) and answers order tracking. */
+/* The shop's sign-in service also receives orders and saves them privately for the super admin. */
 const ORDER_API = "https://giftoria-auth.giftoria-atelier.workers.dev";
 let S = normalizeShop({});
 const findP = id => S.products.find(p => p.id === id);
@@ -218,10 +218,9 @@ function buildOrder(){
     area:$("fArea").value==="Other"?"":$("fArea").value,addr:$("fAddr").value.trim(),need:"",note:"",card:""};
 }
 /* The shop's super admin reads this exact message format back in (Orders → Add an order from WhatsApp). */
-const trackUrl=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"#track="+encodeURIComponent(no);
 function orderText(o){
   const day=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
-  const L=[`*${S.shop.name} | New Order*`,`Tracking ID: *${o.no}*`,`Date: ${day}`,"","*Items*"];
+  const L=[`*${S.shop.name} | New Order*`,`Order ID: *${o.no}*`,`Date: ${day}`,"","*Items*"];
   o.items.forEach(i=>L.push(`• ${i.name} × ${i.qty} — ${rs(i.price*i.qty)}`));
   L.push("",`*Total: ${rs(o.tot)}*`);
   if(o.pct){L.push(`Advance due (${o.pct}%): ${rs(o.adv)}`);if(o.rest>0)L.push(`Balance on delivery: ${rs(o.rest)}`)}
@@ -233,7 +232,6 @@ function orderText(o){
   const acc=o.pct?payAccounts(S):[];
   if(o.pct){L.push("","*Payment*");acc.forEach(a=>L.push(`${a.k}: ${a.v}${a.who?" ("+a.who+")":""}`));
     L.push(`Status: Awaiting payment. I will share the payment screenshot in this chat.`)}
-  L.push("",`Track your order: ${trackUrl(o.no)}`);
   return L.join("\n");
 }
 const setMsg=(id,t,err)=>{$(id).textContent=t;$(id).className="msg"+(err?" err":"")};
@@ -308,19 +306,12 @@ function rememberOrder(o){
   myOrders=[{no:o.no,phone:o.phone,at:Date.now(),items:o.items,tot:o.tot,adv:o.adv,pct:o.pct,cart:{...cart},text:orderText(o)},...myOrders.filter(x=>x.no!==o.no)].slice(0,20);
   save("gd-orders",myOrders);renderMyOrders();
 }
-let TRACK={};
-async function trackOrders(){
-  const q=myOrders.filter(o=>o.phone).map(o=>({no:o.no,phone:o.phone}));if(!q.length)return;
-  try{const r=await fetch(ORDER_API+"/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orders:q})});
-    if(r.ok){TRACK=(await r.json()).orders||{};myOrders.forEach(o=>{if(!TRACK[o.no])TRACK[o.no]={status:"",label:"Not received yet. Please send the order on WhatsApp."}});renderMyOrders()}}catch(e){}
-}
 function renderMyOrders(){
   $("orderCount").textContent=myOrders.length;$("orderCount").hidden=!myOrders.length;
   $("ordersBody").innerHTML=myOrders.length?`<p class="note">Orders placed on this device. We confirm every order on WhatsApp.</p>`+myOrders.map((o,i)=>`<div class="myo">
       <div class="ohead"><span class="no">${esc(o.no)}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK",{day:"numeric",month:"short",year:"numeric"})}</span></div>
       <ul>${(o.items||[]).map(it=>`<li>${esc(it.name)} × ${it.qty}</li>`).join("")}</ul>
       <div class="sub">Total <b>${rs(o.tot)}</b>${o.pct?` · Advance ${rs(o.adv)}`:""}</div>
-      <div class="ostatus" data-s="${esc((TRACK[o.no]||{}).status||"")}">${TRACK[o.no]?"Status: <b>"+esc(TRACK[o.no].label)+"</b>":"Status: checking…"}</div>
       <div class="acts"><a class="sm green" href="${esc(waLink(o.text||""))}" target="_blank" rel="noopener">Send on WhatsApp again</a><button class="sm" type="button" data-reorder="${i}">Order again</button></div>
     </div>`).join("")+`<button class="sm red" type="button" id="clearOrders" style="align-self:start">Clear this list</button>`
     :`<div class="empty">No orders yet. Orders you place on this device appear here.</div>`;
@@ -334,16 +325,6 @@ $("ordersBody").addEventListener("click",e=>{
   if(e.target.closest("#clearOrders")){myOrders=[];save("gd-orders",myOrders);renderMyOrders()}
 });
 
-$("trackForm").addEventListener("submit",async e=>{
-  e.preventDefault();const no=$("tNo").value.trim().toUpperCase(),phone=$("tPhone").value.trim();
-  if(!ORDER_NO_RE.test(no)){$("tResult").textContent="Enter the tracking ID from your order message, e.g. GA-261112-K7Q4.";return}
-  if(phone.replace(/\D/g,"").length<10){$("tResult").textContent="Enter the phone number used for the order.";return}
-  $("tResult").textContent="Checking…";
-  try{const r=await fetch(ORDER_API+"/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orders:[{no,phone}]})});
-    const t=r.ok?((await r.json()).orders||{})[no]:null;
-    $("tResult").innerHTML=t?`Order <b>${esc(no)}</b>: <b>${esc(t.label)}</b>`:"No order found with this tracking ID and phone number. If you have just placed it, please make sure the WhatsApp message was sent.";
-  }catch(err){$("tResult").textContent="Could not check right now. Please try again."}
-});
 
 /* ---------- overlays ---------- */
 let openPanel=null;
@@ -351,7 +332,7 @@ function show(panel){if(openPanel)openPanel.hidden=true;openPanel=panel;$("scrim
 $("openCart").onclick=openCart;
 $("cartFloat").onclick=openCart;
 $("openWish").onclick=()=>show($("wishDrawer"));
-$("openOrders").onclick=()=>{show($("ordersDrawer"));trackOrders()};
+$("openOrders").onclick=()=>show($("ordersDrawer"));
 $("openSearch").onclick=()=>{show(null);$("shop").scrollIntoView({behavior:"smooth"});setTimeout(()=>$("q").focus(),400)};
 $("scrim").onclick=()=>show(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>show(null));
@@ -366,7 +347,5 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")show(null)});
   }catch(e){$("loader").hidden=true;$("loadErr").hidden=false;return}
   $("loader").hidden=true;$("app").hidden=false;
   renderAll();
-  const tr=(location.hash.match(/^#track=([^&]+)/)||[])[1];
-  if(tr){$("tNo").value=decodeURIComponent(tr).toUpperCase();try{$("tPhone").value=load("gd-cust",{}).fPhone||""}catch(e){}show($("ordersDrawer"));trackOrders();if($("tPhone").value)$("trackForm").requestSubmit();return}
   if(location.hash&&location.hash.length>1){const t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
 })();

@@ -238,8 +238,7 @@ async function mutateOrders(fn, message) {
 }
 /* WhatsApp message telling the customer about their order's current status. */
 function statusText(o, status) {
-  const shop = S.shop.name || "our shop", hi = `Hello ${o.name || ""},`, id = `Tracking ID: *${o.no}*`;
-  const site = location.origin + location.pathname.replace(/admin\/[^/]*$/, ""), track = `Track your order: ${site}#track=${encodeURIComponent(o.no)}`;
+  const shop = S.shop.name || "our shop", hi = `Hello ${o.name || ""},`, id = `Order ID: *${o.no}*`;
   const bal = o.rest ? `Balance to pay on delivery: *${rs(o.rest)}*` : "Your order is fully paid.";
   const T = {
     paid: [`${hi} we have received your payment${o.adv ? " of " + rs(o.adv) : ""}. Thank you!`, "", `*Your order is confirmed.* ${id}`, bal, "", "We have started making your order by hand and will update you when it is out for delivery."],
@@ -249,19 +248,17 @@ function statusText(o, status) {
     cancel: [`${hi} your order ${o.no} has been cancelled.`, "", "If you have any questions or this is a mistake, please reply to this message."]
   }[status];
   if (!T) return "";
-  return [...T, ...(status === "cancel" || status === "done" ? [] : ["", track]), "", `— ${shop}`].join("\n");
+  return [...T, "", `— ${shop}`].join("\n");
 }
 const statusLink = (o, st) => `https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(statusText(o, st))}`;
 
 /* WhatsApp message to the customer with the advance due and the shop's payment accounts. */
 function paymentText(o) {
   const acc = payAccounts(S), shop = S.shop.name || "our shop";
-  const L = [`Hello ${o.name || ""}, thank you for your order with ${shop}.`, "", `Tracking ID: *${o.no}*`, `Total: ${rs(o.tot)}`, `*Advance due: ${rs(o.adv)}*`, ""];
+  const L = [`Hello ${o.name || ""}, thank you for your order with ${shop}.`, "", `Order ID: *${o.no}*`, `Total: ${rs(o.tot)}`, `*Advance due: ${rs(o.adv)}*`, ""];
   if (acc.length) { L.push("Please send the advance to any one of these accounts:"); acc.forEach(a => L.push(`• ${a.k}: ${a.v}${a.who ? " (" + a.who + ")" : ""}`)) }
   else L.push("We will share our account details with you shortly.");
   L.push("", "After paying, please share the payment screenshot in this chat. We will confirm your order once the payment is checked.");
-  const site = location.origin + location.pathname.replace(/admin\/[^/]*$/, "");
-  L.push("", `Track your order: ${site}#track=${encodeURIComponent(o.no)}`);
   return L.join("\n");
 }
 function renderStats() {
@@ -319,7 +316,7 @@ function parseOrder(raw) {
   const t = raw.replace(/\*/g, "").replace(/\r/g, "");
   const g = re => { const m = t.match(re); return m ? m[1].trim() : "" };
   const items = []; t.split("\n").forEach(l => { const m = l.match(/^\s*[•\-]\s*(.+?)\s+[x×]\s*(\d+)\s*(?:=|—|–|-)\s*Rs\.?\s*([\d,]+)/i); if (m) { const q = +m[2]; items.push({name: m[1].trim(), qty: q, price: Math.round(num(m[3]) / q)}) } });
-  const o = {no: g(/(?:Order|Tracking ID)\s*[—–\-:#*]*\s*\*?([A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4}))/i).toUpperCase(), items,
+  const o = {no: g(/(?:Order ID|Tracking ID|Order)\s*[—–\-:#*]*\s*\*?([A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4}))/i).toUpperCase(), items,
     del: num(g(/(?:^|\n)\s*Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/Advance[^:\n]*:\s*Rs\.?\s*([\d,]+)/i)),
     name: g(/(?:Naam|Name):\s*(.+)/i), phone: g(/Phone:\s*(.+)/i), city: g(/City:\s*(.+)/i), addr: g(/Address:\s*(.+)/i), area: g(/Area:\s*(.+)/i),
     needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), card: g(/Card(?: message)?:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};

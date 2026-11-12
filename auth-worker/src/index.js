@@ -25,7 +25,6 @@ export default {
       if (url.pathname === "/login" && request.method === "POST") return await login(request, env);
       if (url.pathname === "/token" && request.method === "POST") return await refresh(request, env);
       if (url.pathname === "/order" && request.method === "POST") return await placeOrder(request, env);
-      if (url.pathname === "/track" && request.method === "POST") return await trackOrder(request, env);
       if (url.pathname === "/callback") return await githubCallback(url, env);
       if (url.pathname === "/") return new Response("Giftoria Atelier admin sign-in service.", {headers: {"content-type": "text/plain; charset=utf-8"}});
     } catch (e) {
@@ -105,9 +104,7 @@ async function githubCallback(url, env) {
 
 /* ---------- orders from the website ----------
    POST /order stores a customer's order in orders.json in the private orders repository, so it appears in the
-   super admin without pasting the WhatsApp message. POST /track lets a customer see their order's status, but only
-   with the order number and the matching phone number. Both are rate-limited per visitor. */
-const STATUS_LABEL = {new: "Awaiting payment", paid: "Payment approved", making: "In progress", sent: "Out for delivery", done: "Delivered", cancel: "Cancelled"};
+   super admin without pasting the WhatsApp message. It is rate-limited per visitor. */
 const hits = new Map();
 function limited(request, key, max) {
   const ip = request.headers.get("CF-Connecting-IP") || "?", k = key + ":" + ip, now = Date.now();
@@ -152,16 +149,4 @@ async function placeOrder(request, env) {
     if (w.status !== 409 && w.status !== 422) throw new Error("orders write " + w.status);
   }
   return reply(request, env, {error: "busy"}, 503);
-}
-async function trackOrder(request, env) {
-  if (limited(request, "track", 120)) return reply(request, env, {error: "too_many"}, 429);
-  const b = await request.json().catch(() => ({}));
-  const asked = (Array.isArray(b.orders) ? b.orders : []).slice(0, 20);
-  const {list} = await readOrders(env, (await repoToken(env)).token);
-  const out = {};
-  for (const q of asked) {
-    const o = list.find(x => x.no === str(q.no, 20).toUpperCase());
-    if (o && digits(q.phone).length >= 7 && digits(o.phone).slice(-7) === digits(q.phone).slice(-7)) out[o.no] = {status: o.status, label: STATUS_LABEL[o.status] || o.status};
-  }
-  return reply(request, env, {orders: out});
 }
