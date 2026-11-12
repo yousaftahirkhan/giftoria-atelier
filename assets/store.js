@@ -224,7 +224,7 @@ function totals(){
 function renderCart(){
   cleanCart();const ids=Object.keys(cart);const n=ids.reduce((s,id)=>s+cart[id],0);
   $("cartCount").textContent=n;$("cartCount").hidden=!n;
-  $("cartFloat").hidden=!n;$("checkoutBtn").disabled=!n;$("cartFloatTxt").innerHTML=`<b class="cf-n">${n}</b>View cart<span class="cf-t">${rs(ids.reduce((s,id)=>s+(findP(id)?.price||0)*cart[id],0))}</span>`;
+  $("cartFloat").hidden=!n;$("checkoutBtn").disabled=!n;$("cartFloatTxt").innerHTML=`<b class="cf-n">${n}</b><span class="cf-l">View cart</span>`;$("cartFloat").setAttribute("aria-label",`View cart, ${n} item${n>1?"s":""}, ${rs(ids.reduce((s,id)=>s+(findP(id)?.price||0)*cart[id],0))}`);
   $("lines").innerHTML=ids.length?ids.map(id=>{const p=findP(id);return `<div class="line"><div class="mini">${visual(p,"")}</div>
     <div><div class="nm">${esc(p.name)}</div><div class="sub">${rs(p.price)} each</div></div>
     <div class="qty"><button data-d="-1" data-id="${esc(id)}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-d="1" data-id="${esc(id)}" aria-label="Increase">+</button><button class="rm" data-rm="${esc(id)}" aria-label="Remove ${esc(p.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button></div></div>`}).join("")

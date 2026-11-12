@@ -283,3 +283,20 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
 .cart-float #cartFloatTxt{display:flex;align-items:center;gap:8px;overflow:visible}
 .cart-float .cf-n{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--rose);color:#fff;font-size:11.5px;line-height:1;font-variant-numeric:tabular-nums}
 .cart-float .cf-t{color:rgba(255,255,255,.72);font-weight:700;font-variant-numeric:tabular-nums;padding-left:8px;border-left:1px solid rgba(255,255,255,.2)}
+/* View cart and WhatsApp buttons share one width; on small phones both shrink to an icon */
+.cart-float,.wa-float{width:146px;justify-content:center}
+.cart-float{height:44px;padding:0 12px}
+.cart-float svg{width:18px;height:18px}
+.cart-float .cf-n{position:absolute;top:4px;left:26px;min-width:18px;height:18px;padding:0 4px;font-size:10.5px;border:2px solid var(--ink)}
+.cart-float .cf-l{white-space:nowrap}
+@media (max-width:460px){
+  .cart-float,.wa-float{width:56px;padding:0}
+  .cart-float{height:49px}
+  .cart-float .cf-l{display:none}
+  .cart-float .cf-n{left:30px;top:7px}
+}
+.cart-float,.wa-float{height:46px;padding-top:0;padding-bottom:0}
+@media (max-width:460px){
+  .cart-float,.wa-float{width:52px;height:52px;padding:0;border-radius:50%}
+  .cart-float .cf-n{left:27px;top:8px}
+}
