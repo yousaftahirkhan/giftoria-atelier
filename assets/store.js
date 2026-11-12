@@ -191,7 +191,7 @@ function renderCart(){
   $("cartFloat").hidden=!n;$("checkoutBtn").disabled=!n;$("cartFloatTxt").textContent=`View cart (${n}) · ${rs(ids.reduce((s,id)=>s+(findP(id)?.price||0)*cart[id],0))}`;
   $("lines").innerHTML=ids.length?ids.map(id=>{const p=findP(id);return `<div class="line"><div class="mini">${visual(p,"")}</div>
     <div><div class="nm">${esc(p.name)}</div><div class="sub">${rs(p.price)} each</div></div>
-    <div class="qty"><button data-d="-1" data-id="${esc(id)}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-d="1" data-id="${esc(id)}" aria-label="Increase">+</button></div></div>`}).join("")
+    <div class="qty"><button data-d="-1" data-id="${esc(id)}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-d="1" data-id="${esc(id)}" aria-label="Increase">+</button><button class="rm" data-rm="${esc(id)}" aria-label="Remove ${esc(p.name)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button></div></div>`}).join("")
     :`<div class="empty">Your cart is empty. Browse the collection to add a bouquet or keychain.</div>`;
   const ad=(S.addons||[]).map((a,i)=>a.name?`<label class="addon" for="ad${i}"><input type="checkbox" id="ad${i}" data-ad="${i}"${addSel[i]?" checked":""}><span>${esc(a.name)}</span><b class="sub">${+a.price?"+ "+rs(a.price):"Free"}</b></label>`:"").join("");
   $("addonBox").innerHTML=ad?`<div class="fld" style="font-size:13px">Add a little extra</div>${ad}`:"";$("addonBox").hidden=!ad||!ids.length;
@@ -200,7 +200,9 @@ function renderCart(){
   $("tDel").textContent="Paid to rider";$("tTot").textContent=rs(t.tot);
   $("tAdvRow").hidden=!t.pct;$("tAdvLbl").textContent=t.pct>=100?"Due now (full payment)":`Advance due now (${t.pct}%)`;$("tAdv").textContent=rs(t.adv);
 }
-$("lines").addEventListener("click",e=>{const b=e.target.closest("button[data-d]");if(!b)return;const id=b.dataset.id;
+$("lines").addEventListener("click",e=>{const rm=e.target.closest("button[data-rm]");
+  if(rm){const p=findP(rm.dataset.rm);delete cart[rm.dataset.rm];persist();refreshProducts();toast((p?p.name:"Item")+" removed from cart");return}
+  const b=e.target.closest("button[data-d]");if(!b)return;const id=b.dataset.id;
   cart[id]+=+b.dataset.d;if(cart[id]<=0)delete cart[id];persist();refreshProducts()});
 $("addonBox").addEventListener("change",e=>{const c=e.target.closest("[data-ad]");if(!c)return;addSel[c.dataset.ad]=c.checked;renderCart()});
 {const d=load("gd-cust",{});["fName","fPhone","fAddr"].forEach(k=>{if(d[k])$(k).value=d[k]})}
