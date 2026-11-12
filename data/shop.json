@@ -1,0 +1,436 @@
+{
+ "shop": {
+  "name": "Giftoria Atelier",
+  "announce": "Handmade to order · Delivered across Multan · 50% advance, balance on delivery",
+  "city": "Multan",
+  "wa": "0317 6926757",
+  "phone": "",
+  "email": "",
+  "hours": "",
+  "address": "",
+  "footAbout": "Handcrafted pipe-cleaner and crochet flowers, made to order in Multan. Bouquets, keepsakes and gifts that never wilt.",
+  "delLocal": 250,
+  "freeAbove": 5000,
+  "advancePct": 50
+ },
+ "reg": {
+  "owner": "",
+  "business": "",
+  "regNo": "",
+  "ntn": "",
+  "since": "",
+  "address": ""
+ },
+ "social": {
+  "insta": "",
+  "fb": "",
+  "tiktok": ""
+ },
+ "pay": {
+  "jazz": "",
+  "jazzName": "",
+  "easy": "",
+  "easyName": "",
+  "bank": "",
+  "bankName": "",
+  "iban": ""
+ },
+ "slides": [
+  {
+   "kicker": "Handmade in Multan",
+   "title": "Flowers that never wilt",
+   "text": "Pipe-cleaner and crochet blooms, shaped by hand for every order and made to last for years.",
+   "btn": "Shop the collection",
+   "occ": "",
+   "photo": "",
+   "art": {
+    "kind": "bouquet",
+    "shape": "mix",
+    "colors": [
+     "#F28AB2",
+     "#F9DD8C",
+     "#C7B2F0",
+     "#BFE3D0",
+     "#F7B5CD",
+     "#A9D6F5",
+     "#F28AB2",
+     "#F9DD8C",
+     "#C7B2F0"
+    ],
+    "wrap": "#FFFFFF"
+   },
+   "ref": "pastel12"
+  },
+  {
+   "kicker": "For Eid and weddings",
+   "title": "Gajray, hampers and keepsakes",
+   "text": "Custom sets in your theme colours for mehndi, nikkah and Eid gifting.",
+   "btn": "Explore wedding gifts",
+   "occ": "shaadi",
+   "photo": "",
+   "art": {
+    "kind": "gajra",
+    "colors": [
+     "#FFFFFF",
+     "#F9DD8C"
+    ]
+   },
+   "ref": "eidbox"
+  },
+  {
+   "kicker": "Small gifts, big smiles",
+   "title": "Keychains, clips and charms",
+   "text": "Daisy keychains, flower hair clips and bag charms. Bulk orders for giveaways are welcome.",
+   "btn": "Shop accessories",
+   "occ": "",
+   "cat": "key",
+   "photo": "",
+   "art": {
+    "kind": "keybouquet",
+    "colors": [
+     "#F28AB2",
+     "#C7B2F0",
+     "#F9DD8C"
+    ]
+   },
+   "ref": "hair1"
+  }
+ ],
+ "promo": {
+  "title": "Theme bouquets for wedding season",
+  "text": "Tell us your event colours and we will create the full set, from mehndi gajray to the nikkah bouquet.",
+  "btn": "Start a custom order",
+  "occ": "shaadi",
+  "photo": "",
+  "ref": "gajra"
+ },
+ "about": {
+  "title": "A studio where every flower is made by hand",
+  "text": "Giftoria Atelier is a gift studio: \"atelier\" is the French word for an artist's workshop, and that is how we work. We work one stem at a time, with care for every detail.\n\nThe studio began in a single room at home, where the first bouquet was twisted from pipe cleaners and yarn.\n\nToday every bouquet, keychain and gajra is still made after you order, in the colours you choose, and delivered across Multan.",
+  "sign": "",
+  "photo": "",
+  "ref": "tulip1"
+ },
+ "policies": {
+  "howto": "1. Add products to your cart and enter your delivery details.\n2. Place the order to receive your order number.\n3. Pay the advance by JazzCash, Easypaisa or bank transfer.\n4. Send your order number and payment screenshot on WhatsApp.\n5. We confirm your order, make it by hand and deliver it to your door in Multan.",
+  "refund": "Every item is made to order, and the advance pays for the materials.\n\n• Cancel before work begins and the advance is refunded in full.\n• Once work has begun, the advance is non-refundable.\n• If an item arrives damaged or incorrect, send a photo within 48 hours. We will remake it or refund you.",
+  "terms": "• We deliver within Multan only.\n• Prices are in Pakistani Rupees and may change.\n• Because every piece is handmade, colour and size may vary slightly.\n• Delivery times may vary with traffic and weather.\n• An order is confirmed once the advance is received.",
+  "privacy": "Your name, phone number and address are used only to process and deliver your order. We do not share them with anyone except the rider who delivers your order."
+ },
+ "addons": [
+  {
+   "name": "Message card",
+   "price": 0
+  },
+  {
+   "name": "Chocolate bar",
+   "price": 350
+  },
+  {
+   "name": "Mini teddy bear",
+   "price": 600
+  },
+  {
+   "name": "Fairy lights",
+   "price": 300
+  }
+ ],
+ "reviews": [],
+ "gallery": [],
+ "products": [
+  {
+   "id": "tulip5",
+   "cat": "bouquet",
+   "name": "Pink Tulip Bouquet",
+   "spec": "5 stems · pipe cleaner · 14 in",
+   "desc": "Five blush-pink tulips wrapped in tissue paper and tied with a satin ribbon.",
+   "price": 1450,
+   "best": true,
+   "occ": [
+    "birthday",
+    "love"
+   ],
+   "added": 13,
+   "photo": "images/products/tulip5.jpg",
+   "sample": true
+  },
+  {
+   "id": "sun3",
+   "cat": "bouquet",
+   "name": "Sunflower Trio",
+   "spec": "3 stems · crochet · 13 in",
+   "desc": "Three bright crochet sunflowers in a kraft-paper wrap with jute twine.",
+   "price": 1250,
+   "was": 1500,
+   "occ": [
+    "graduation",
+    "birthday"
+   ],
+   "added": 12,
+   "photo": "images/products/sun3.jpg",
+   "sample": true
+  },
+  {
+   "id": "lav7",
+   "cat": "bouquet",
+   "name": "Lavender Dream",
+   "spec": "7 stems · pipe cleaner · 15 in",
+   "desc": "Seven lavender and lilac blooms in a crisp white wrap.",
+   "price": 1850,
+   "best": true,
+   "occ": [
+    "anniversary",
+    "love"
+   ],
+   "added": 11,
+   "photo": "images/products/lav7.jpg",
+   "sample": true
+  },
+  {
+   "id": "pastel12",
+   "cat": "bouquet",
+   "name": "Pastel Garden Bouquet",
+   "spec": "12 stems · mixed · 17 in",
+   "desc": "Twelve pastel blooms (tulips, roses, daisies and sunflowers) in white paper with a satin bow.",
+   "price": 2800,
+   "best": true,
+   "occ": [
+    "shaadi",
+    "birthday"
+   ],
+   "added": 10,
+   "photo": "images/products/pastel12.jpg",
+   "sample": true
+  },
+  {
+   "id": "rosebox",
+   "cat": "box",
+   "name": "Red Rose Keepsake Box",
+   "spec": "9 roses · lidded gift box",
+   "desc": "Nine red pipe-cleaner roses set in a black keepsake box with a gold rim.",
+   "price": 3200,
+   "isNew": true,
+   "occ": [
+    "love",
+    "anniversary"
+   ],
+   "added": 14,
+   "photo": "images/products/rosebox.jpg",
+   "sample": true
+  },
+  {
+   "id": "rose1",
+   "cat": "mini",
+   "name": "Single Red Rose",
+   "spec": "1 stem · pipe cleaner · 12 in",
+   "desc": "A single red rose with a leaf. A small gesture that lasts.",
+   "price": 350,
+   "occ": [
+    "love"
+   ],
+   "added": 6,
+   "photo": "images/products/rose1.jpg",
+   "sample": true
+  },
+  {
+   "id": "tulip1",
+   "cat": "mini",
+   "name": "Single Crochet Tulip",
+   "spec": "1 stem · crochet · 11 in",
+   "desc": "One crochet tulip in the colour of your choice.",
+   "price": 400,
+   "occ": [
+    "graduation"
+   ],
+   "added": 5,
+   "photo": "images/products/tulip1.jpg",
+   "sample": true
+  },
+  {
+   "id": "kdaisy",
+   "cat": "key",
+   "name": "Daisy Keychain",
+   "spec": "Crochet · 6 cm",
+   "desc": "A white crochet daisy on a gold key ring.",
+   "price": 299,
+   "best": true,
+   "occ": [
+    "eid",
+    "birthday"
+   ],
+   "added": 4,
+   "photo": "images/products/kdaisy.jpg",
+   "sample": true
+  },
+  {
+   "id": "ksun",
+   "cat": "key",
+   "name": "Sunflower Keychain",
+   "spec": "Crochet · 6 cm",
+   "desc": "A bright crochet sunflower for your keys or bag.",
+   "price": 349,
+   "occ": [
+    "graduation"
+   ],
+   "added": 3,
+   "photo": "images/products/ksun.jpg",
+   "sample": true
+  },
+  {
+   "id": "kbouquet",
+   "cat": "key",
+   "name": "Mini Bouquet Keychain",
+   "spec": "3 tiny flowers · 8 cm",
+   "desc": "A tiny wrapped bouquet of three flowers on a gold key ring.",
+   "price": 499,
+   "isNew": true,
+   "occ": [
+    "birthday",
+    "eid"
+   ],
+   "added": 15,
+   "photo": "images/products/kbouquet.jpg",
+   "sample": true
+  },
+  {
+   "id": "gajra",
+   "cat": "jewel",
+   "name": "Crochet Gajra (Pair)",
+   "spec": "2 pieces · stretch fit",
+   "desc": "A pair of crochet gajray for mehndi and Eid, made in your choice of colours.",
+   "price": 650,
+   "isNew": true,
+   "occ": [
+    "shaadi",
+    "eid"
+   ],
+   "added": 16,
+   "photo": "images/products/gajra.jpg",
+   "sample": true
+  },
+  {
+   "id": "eidbox",
+   "cat": "hamper",
+   "name": "Eid Gift Hamper",
+   "spec": "Mini bouquet · 2 keychains · card",
+   "desc": "A mini bouquet, two flower keychains and an Eid card, presented in a gift box.",
+   "price": 1900,
+   "occ": [
+    "eid"
+   ],
+   "added": 8,
+   "photo": "images/products/eidbox.jpg",
+   "sample": true
+  },
+  {
+   "id": "bday",
+   "cat": "hamper",
+   "name": "Birthday Bouquet with Card",
+   "spec": "9 stems · handwritten card",
+   "desc": "Nine cheerful blooms in pink, yellow and blue, with a handwritten card.",
+   "price": 2350,
+   "was": 2600,
+   "occ": [
+    "birthday"
+   ],
+   "added": 9,
+   "photo": "images/products/bday.jpg",
+   "sample": true
+  },
+  {
+   "id": "choco1",
+   "cat": "choco",
+   "name": "Chocolate Blossom Bouquet",
+   "spec": "7 flowers · 6 chocolates",
+   "price": 2500,
+   "isNew": true,
+   "added": 22,
+   "occ": [
+    "birthday",
+    "anniversary",
+    "love"
+   ],
+   "desc": "Pastel pipe-cleaner flowers arranged with gold-wrapped chocolates and finished with a satin ribbon.",
+   "photo": "images/products/choco1.jpg",
+   "sample": true
+  },
+  {
+   "id": "pot2",
+   "cat": "pots",
+   "name": "Tulip Pot",
+   "spec": "5 tulips · ceramic pot · 9 in",
+   "price": 1150,
+   "isNew": true,
+   "added": 21,
+   "occ": [
+    "anniversary",
+    "love",
+    "graduation"
+   ],
+   "desc": "Five pipe-cleaner tulips in a white ceramic pot. A flower for the desk or shelf that never needs water.",
+   "photo": "images/products/pot2.jpg",
+   "sample": true
+  },
+  {
+   "id": "pot1",
+   "cat": "pots",
+   "name": "Crochet Succulent Trio",
+   "spec": "3 succulents · ceramic pots",
+   "price": 1350,
+   "added": 20,
+   "occ": [
+    "graduation",
+    "birthday"
+   ],
+   "desc": "Three crochet succulents in small white pots. Evergreen, easy to love and zero care.",
+   "photo": "images/products/pot1.jpg",
+   "sample": true
+  },
+  {
+   "id": "hair1",
+   "cat": "hair",
+   "name": "Daisy Hair Clips (Set of 4)",
+   "spec": "Crochet · snap clips",
+   "price": 450,
+   "isNew": true,
+   "added": 19,
+   "occ": [
+    "eid",
+    "birthday"
+   ],
+   "desc": "Four crochet daisies on snap clips in white, pink, lilac and butter yellow.",
+   "photo": "images/products/hair1.jpg",
+   "sample": true
+  },
+  {
+   "id": "hair2",
+   "cat": "hair",
+   "name": "Blossom Scrunchie",
+   "spec": "Crochet · soft elastic",
+   "price": 350,
+   "added": 18,
+   "occ": [
+    "eid",
+    "birthday"
+   ],
+   "desc": "A soft crochet scrunchie trimmed with tiny flowers. Gentle on hair and lovely on the wrist.",
+   "photo": "images/products/hair2.jpg",
+   "sample": true
+  },
+  {
+   "id": "decor1",
+   "cat": "decor",
+   "name": "Car Mirror Flower Hanging",
+   "spec": "Crochet · 18 cm drop",
+   "price": 650,
+   "added": 17,
+   "occ": [
+    "eid",
+    "love"
+   ],
+   "desc": "A small cluster of crochet flowers on a satin loop, made for a car mirror, door handle or bag.",
+   "photo": "images/products/decor1.jpg",
+   "sample": true
+  }
+ ]
+}

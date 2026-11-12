@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en" data-base="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Giftoria Atelier</title>
+<meta name="description" content="Handmade pipe-cleaner and crochet flowers, bouquets and gifts, made to order and delivered across Multan.">
+<meta name="theme-color" content="#1D6F7A">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
+<link rel="stylesheet" href="assets/base.css">
+<link rel="stylesheet" href="assets/store.css">
+</head>
+<body>
+
+<div class="announce"><div class="wrap" id="announce"></div></div>
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <a class="logo" href="#top" id="top"><span id="logoArt"></span><b id="shopName">Giftoria Atelier</b></a>
+      <nav class="nav" aria-label="Main">
+        <a href="#shop">Shop</a><a href="#occasions">Occasions</a><a href="#story">Our story</a><a href="#contact">Contact</a>
+      </nav>
+      <div class="icons">
+        <button class="ib" id="openSearch" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+        <button class="ib" id="openOrders" aria-label="My orders"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg><span class="ct" id="orderCount" hidden>0</span></button>
+        <button class="ib" id="openWish" aria-label="Wishlist"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></svg><span class="ct" id="wishCount" hidden>0</span></button>
+        <button class="ib" id="openCart" aria-label="Cart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="ct" id="cartCount" hidden>0</span></button>
+      </div>
+    </div>
+    <div class="rail" id="rail" aria-label="Categories"></div>
+  </div>
+</header>
+
+<div class="wrap loader" id="loader" role="status">Loading the shop…</div>
+<div class="wrap loader" id="loadErr" hidden role="alert">The shop could not load. Check your connection and <button class="link" type="button" onclick="location.reload()">try again</button>.</div>
+
+<main id="app" hidden>
+  <section class="wrap hero" aria-label="Featured">
+    <div id="slides"></div>
+    <div class="dots" id="dots"></div>
+  </section>
+
+  <section class="wrap trust" id="trust">
+    <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M6 9h12M6 15h12"/></svg></span><span><b>Handmade to order</b>Every piece made for you</span></div>
+    <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg></span><span><b>Never wilts</b>Keeps its shape for years</span></div>
+    <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></span><span><b id="trustDelT">Delivery across Multan</b><span id="trustDel">Delivered to your door</span></span></div>
+    <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span><b id="trustPayT">50% advance</b><span id="trustPay">JazzCash, Easypaisa, bank</span></span></div>
+  </section>
+
+  <section class="wrap sec" id="occasions">
+    <div class="sec-head"><div><div class="eyebrow">Shop by occasion</div><h2>Gifts for every moment</h2></div></div>
+    <div class="occs" id="occs"></div>
+  </section>
+
+  <section class="wrap sec" id="bestSec">
+    <div class="sec-head"><div><div class="eyebrow">Most loved</div><h2>Bestsellers</h2></div><button class="link" data-goshop="all">View all →</button></div>
+    <div class="shelf" id="best"></div>
+  </section>
+
+  <section class="wrap sec" id="promoSec"><div class="promo" id="promo"></div></section>
+
+  <section class="wrap sec" id="newSec">
+    <div class="sec-head"><div><div class="eyebrow">Just made</div><h2>New arrivals</h2></div></div>
+    <div class="shelf" id="newest"></div>
+  </section>
+
+  <section class="wrap sec" id="shop">
+    <div class="sec-head"><div><div class="eyebrow">The full collection</div><h2>Shop</h2></div><span class="sub" id="shopCount"></span></div>
+    <div class="filters">
+      <div class="chips" id="catChips" role="group" aria-label="Category"></div>
+    </div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search tulips, keychains…" aria-label="Search products">
+      <select id="occSel" aria-label="Occasion"></select>
+      <select id="sortSel" aria-label="Sort"><option value="feat">Featured</option><option value="new">Newest</option><option value="low">Price: low to high</option><option value="high">Price: high to low</option></select>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="wrap sec" id="gallerySec" hidden>
+    <div class="sec-head"><div><div class="eyebrow">Made for our customers</div><h2>Recent orders</h2></div><a class="link" id="instaLink" href="#" target="_blank" rel="noopener" hidden>Follow on Instagram →</a></div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section class="wrap sec" id="revSec" hidden>
+    <div class="sec-head"><div><div class="eyebrow">Kind words</div><h2>Reviews</h2></div></div>
+    <div class="reviews" id="reviews"></div>
+  </section>
+
+  <section class="wrap sec story" id="story">
+    <div class="arch" id="storyArt"></div>
+    <div>
+      <div class="eyebrow">Our story</div>
+      <h2 id="storyTitle" style="font-size:clamp(28px,3.6vw,42px);margin:6px 0 12px"></h2>
+      <p id="storyText"></p>
+      <div class="sig" id="storySig"></div>
+    </div>
+  </section>
+
+  <section class="wrap sec" id="contact">
+    <div class="sec-head"><div><div class="eyebrow">Get in touch</div><h2>Contact</h2></div></div>
+    <div class="contact" id="contactBoxes"></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap cols">
+    <div>
+      <div class="logo" style="margin-bottom:10px"><span id="logoArt2"></span><b id="footName" style="font-size:22px"></b></div>
+      <p id="footAbout"></p>
+      <div class="social" id="social"></div>
+    </div>
+    <div><h4>Shop</h4><ul id="footCats"></ul></div>
+    <div><h4>Help</h4><ul>
+      <li><button class="fl" data-policy="howto">How to order</button></li>
+      <li><button class="fl" data-policy="refund">Refunds &amp; returns</button></li>
+      <li><button class="fl" data-policy="terms">Terms &amp; conditions</button></li>
+      <li><button class="fl" data-policy="privacy">Privacy policy</button></li>
+    </ul></div>
+    <div><h4>Contact</h4><ul id="footContact"></ul></div>
+  </div>
+  <div class="wrap legal"><span id="copy"></span><span id="regLine"></span></div>
+</footer>
+<a class="wa-float" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" hidden><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg> <span>WhatsApp</span></a>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<div class="modal" id="qvModal" hidden role="dialog" aria-label="Product">
+  <div class="dhead"><span class="eyebrow" id="qvCat"></span><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="qvgrid" id="qvBody"></div>
+</div>
+<div class="modal" id="polModal" hidden role="dialog" aria-label="Policy">
+  <div class="dhead"><h2 id="polTitle"></h2><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="policy" id="polBody"></div>
+</div>
+
+<aside class="drawer" id="wishDrawer" hidden aria-label="Wishlist">
+  <div class="dhead"><h2>Wishlist</h2><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="dbody" id="wishBody"></div>
+</aside>
+
+<aside class="drawer" id="ordersDrawer" hidden aria-label="My orders">
+  <div class="dhead"><h2>My orders</h2><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="dbody" id="ordersBody"></div>
+</aside>
+
+<aside class="drawer" id="drawer" hidden aria-label="Cart">
+  <div class="dhead"><h2 id="cartTitle">Your cart</h2><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="dbody" id="cartStep">
+    <div id="lines"></div>
+    <div id="addonBox" class="form sep"></div>
+    <form class="form sep" id="orderForm" novalidate>
+      <label for="fCard">Gift card message (optional)<textarea id="fCard" rows="2" maxlength="160" placeholder="Happy Birthday Sara! With love"></textarea></label>
+      <label for="fName">Full name<input id="fName" autocomplete="name" placeholder="Ayesha Khan"></label>
+      <label for="fPhone">Phone / WhatsApp<input id="fPhone" inputmode="tel" autocomplete="tel" placeholder="0312 3456789"></label>
+      <label for="fCity">City<select id="fCity"><option value="local">Multan</option></select></label>
+      <label for="fArea">Area<input id="fArea" list="areaList" placeholder="e.g. Gulgasht Colony"></label>
+      <datalist id="areaList"><option value="Bosan Road"></option><option value="Cantt"></option><option value="DHA Multan"></option><option value="Garden Town"></option><option value="Gulgasht Colony"></option><option value="Hussain Agahi"></option><option value="Model Town"></option><option value="Mumtazabad"></option><option value="New Multan"></option><option value="Shah Rukn-e-Alam Colony"></option><option value="Shalimar Colony"></option><option value="Wapda Town"></option></datalist>
+      <label for="fAddr">Address<textarea id="fAddr" rows="2" placeholder="House, street, area"></textarea></label>
+      <label for="fDate">Needed by<input id="fDate" type="date"></label>
+      <label for="fNote">Note (colours, size)<input id="fNote" placeholder="e.g. pink and white"></label>
+    </form>
+  </div>
+  <div class="totals" id="cartTotals">
+    <div class="r"><span>Items</span><span id="tSub">Rs 0</span></div>
+    <div class="r" id="tAddRow"><span>Add-ons</span><span id="tAdd">Rs 0</span></div>
+    <div class="r"><span>Delivery</span><span id="tDel">Rs 0</span></div>
+    <div class="r grand"><span>Total</span><span id="tTot">Rs 0</span></div>
+    <div class="r adv" id="tAdvRow"><span id="tAdvLbl">Advance</span><span id="tAdv">Rs 0</span></div>
+    <a class="btn wa block" id="confirmBtn" href="#" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg> Place order on WhatsApp</a>
+    <p class="note" style="text-align:center;font-size:13px">Your WhatsApp chat with us opens with the order ready. Just tap Send.</p>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="dbody" id="payStep" hidden>
+    <div class="receipt" id="receipt"></div>
+    <div class="paybig" id="payBig"></div>
+    <div id="accts" style="display:flex;flex-direction:column;gap:8px"></div>
+    <p class="note" id="payNote"></p>
+    <a class="btn wa block" id="waBtn" href="#" target="_blank" rel="noopener">Open WhatsApp chat again</a>
+    <button class="btn ghost block" id="copyBtn" type="button">Copy order message</button>
+    <div class="msg" id="msg2"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between">
+      <button class="sm" id="backBtn" type="button">← Edit cart</button>
+      <button class="sm" id="newOrderBtn" type="button">Start a new order</button>
+    </div>
+  </div>
+</aside>
+<div class="toast" id="toast" hidden></div>
+
+<script src="assets/common.js"></script>
+<script src="assets/store.js"></script>
+</body>
+</html>

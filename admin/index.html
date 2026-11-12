@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en" data-base="../">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Super Admin | Giftoria Atelier</title>
+<meta name="theme-color" content="#1A2433">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/base.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- Sign in -->
+<section class="signin" id="signin" hidden>
+  <div class="scard">
+    <div class="logo"><span class="logoArt"></span><b>Giftoria Atelier</b></div>
+    <div>
+      <div class="eyebrow">Super admin</div>
+      <h1>Sign in to manage the shop</h1>
+      <p class="hint" style="margin-top:6px">Orders, products, homepage, business details and payments are managed here. Customers never see this page.</p>
+    </div>
+    <form class="form" id="signinForm" autocomplete="off">
+      <label for="tok">GitHub access token<input id="tok" type="password" spellcheck="false" autocapitalize="off" placeholder="github_pat_…" required></label>
+      <label class="toggle" for="remember"><input type="checkbox" id="remember" checked> Keep me signed in on this device</label>
+      <button class="btn rose block" type="submit" id="signBtn">Sign in</button>
+      <div class="msg err" id="signMsg" role="alert"></div>
+    </form>
+    <details class="help">
+      <summary>How to get an access token</summary>
+      <ol>
+        <li>Sign in to GitHub with the shop's account and open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">New fine-grained token</a>.</li>
+        <li>Name it <b>Giftoria admin</b> and choose an expiry date.</li>
+        <li>Under <b>Repository access</b>, choose <b>Only select repositories</b> and select <b id="hRepo">giftoria-atelier</b> and <b id="hOrders">giftoria-orders</b>.</li>
+        <li>Under <b>Permissions → Repository permissions</b>, set <b>Contents</b> to <b>Read and write</b>.</li>
+        <li>Select <b>Generate token</b>, copy it and paste it above.</li>
+      </ol>
+      <p class="hint">Keep the token private. Anyone who has it can change the website. If it is lost or shared, delete it on GitHub and create a new one.</p>
+    </details>
+  </div>
+</section>
+
+<div class="booting" id="booting">Loading…</div>
+
+<!-- Admin app -->
+<div id="app" hidden>
+  <header class="atop">
+    <div class="wrap abar">
+      <div class="logo"><span class="logoArt"></span><b id="shopName">Giftoria Atelier</b><span class="role">Super admin</span></div>
+      <div class="aacts">
+        <a class="sm" href="../" target="_blank" rel="noopener">View website</a>
+        <button class="sm" type="button" id="signOut">Sign out</button>
+      </div>
+    </div>
+    <nav class="wrap tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="orders" aria-selected="true">Orders</button>
+      <button class="tab" role="tab" data-tab="products" aria-selected="false">Products</button>
+      <button class="tab" role="tab" data-tab="home" aria-selected="false">Homepage</button>
+      <button class="tab" role="tab" data-tab="business" aria-selected="false">Business info</button>
+      <button class="tab" role="tab" data-tab="pay" aria-selected="false">Payment &amp; delivery</button>
+    </nav>
+  </header>
+
+  <main class="wrap amain" id="manager">
+    <!-- Orders -->
+    <div class="panel" id="tab-orders">
+      <div class="stats">
+        <div class="stat"><div class="k">Total orders</div><div class="v" id="stCount">0</div></div>
+        <div class="stat"><div class="k">Awaiting payment</div><div class="v" id="stPending">0</div></div>
+        <div class="stat"><div class="k">Sales this month</div><div class="v" id="stMonth">Rs 0</div></div>
+      </div>
+      <div class="banner warn" id="ordersOff" hidden>Order storage is not connected. Create a new access token that also includes the <b id="ordersRepoName">giftoria-orders</b> repository, then sign in again.</div>
+      <div class="box">
+        <h3>Add an order from WhatsApp</h3>
+        <p class="hint">Copy the customer's full WhatsApp order message and paste it here. The name, phone, items and amounts fill in automatically.</p>
+        <textarea id="pasteBox" rows="4" placeholder="New Order — GA-1112-482 …"></textarea>
+        <div id="pastePreview"></div>
+        <div class="two">
+          <button class="btn dark" type="button" id="pasteRead">Read message</button>
+          <button class="btn rose" type="button" id="pasteSave" disabled>Save order</button>
+        </div>
+      </div>
+      <div class="orow">
+        <div class="chips" id="oFilter" role="group" aria-label="Status filter"></div>
+        <button class="sm" type="button" id="oRefresh">Refresh</button>
+      </div>
+      <input id="oSearch" type="search" placeholder="Search by name, phone or order number">
+      <div id="oList" class="olist"></div>
+    </div>
+
+    <!-- Products -->
+    <div class="panel" id="tab-products" hidden>
+      <div class="banner" id="exampleNote">Products marked <b>Sample photo</b> show AI-generated pictures, and customers see that tag. Use <b>Photo</b> or <b>Edit</b> to replace each one with a photo of your own work; the tag disappears automatically. Then select <b>Publish changes</b> below.</div>
+      <div class="box" id="pEditor" hidden>
+        <h3 id="pEdTitle">New product</h3>
+        <div class="pform">
+          <label class="drop" for="pPhoto" id="pDrop"><span id="pDropTxt">Add photo<br><small style="font-weight:600">tap to upload</small></span><input type="file" id="pPhoto" accept="image/*"></label>
+          <div class="form">
+            <label for="pName">Product name<input id="pName" maxlength="50" placeholder="Pink Tulip Bunch"></label>
+            <div class="three">
+              <label for="pPrice">Price (Rs)<input id="pPrice" type="number" inputmode="numeric" min="0" step="10" placeholder="1450"></label>
+              <label for="pWas">Original price (for a sale)<input id="pWas" type="number" inputmode="numeric" min="0" step="10" placeholder="Leave blank"></label>
+              <label for="pCat">Category<select id="pCat"></select></label>
+            </div>
+            <label for="pSpec">Short detail (size, stems)<input id="pSpec" maxlength="60" placeholder="5 stems · pipe cleaner · 14 in"></label>
+            <label for="pDesc">Description<textarea id="pDesc" rows="3" maxlength="400" placeholder="Colours, materials, packaging…"></textarea></label>
+            <div class="fld">Occasions<div class="checks" id="pOcc"></div></div>
+            <div class="checks">
+              <label class="toggle" for="pBest"><input type="checkbox" id="pBest"> Bestseller</label>
+              <label class="toggle" for="pIsNew"><input type="checkbox" id="pIsNew"> "New" badge</label>
+              <label class="toggle" for="pOut"><input type="checkbox" id="pOut"> Sold out</label>
+            </div>
+            <div class="two">
+              <button class="btn rose" type="button" id="pSave">✓ Save product</button>
+              <button class="btn ghost" type="button" id="pCancel">Cancel</button>
+            </div>
+            <div class="msg err" id="pMsg"></div>
+          </div>
+        </div>
+      </div>
+      <div class="box">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <h3>Products (<span id="pCount">0</span>)</h3>
+          <button class="btn dark" type="button" id="pNewBtn">+ New product</button>
+        </div>
+        <div id="pList"></div>
+      </div>
+    </div>
+
+    <!-- Homepage -->
+    <div class="panel" id="tab-home" hidden>
+      <div class="box">
+        <h3>Announcement bar</h3>
+        <label class="fld" for="b-ann">Announcement<input id="b-ann" data-b="shop.announce" maxlength="90"></label>
+      </div>
+      <div class="box">
+        <h3>Hero slides (3)</h3>
+        <p class="hint">Leave a heading blank to hide that slide.</p>
+        <div id="slideEd" style="display:flex;flex-direction:column;gap:14px"></div>
+      </div>
+      <div class="box">
+        <h3>Promo banner</h3>
+        <div class="two">
+          <label class="fld" for="b-pt">Heading<input id="b-pt" data-b="promo.title" maxlength="60"></label>
+          <label class="fld" for="b-pb">Button<input id="b-pb" data-b="promo.btn" maxlength="24"></label>
+        </div>
+        <label class="fld" for="b-px">Text<textarea id="b-px" data-b="promo.text" rows="2" maxlength="200"></textarea></label>
+        <label class="fld" for="b-po">Button links to occasion<select id="b-po" data-b="promo.occ"></select></label>
+        <div class="phrow"><span class="thumb" data-thumb="promo.photo"></span><label class="sm">Change photo<input type="file" accept="image/*" data-ph="promo.photo"></label><button class="sm red" type="button" data-phrm="promo.photo">Remove</button></div>
+      </div>
+      <div class="box">
+        <h3>Recent order photos</h3>
+        <p class="hint">Add photos of orders you have made. This section stays hidden on the website until you add one.</p>
+        <div class="galed" id="galEd"></div>
+        <label class="sm" style="align-self:start">+ Add photos<input type="file" accept="image/*" multiple id="galAdd"></label>
+      </div>
+      <div class="box">
+        <h3>Reviews</h3>
+        <p class="hint">Add only genuine customer reviews, for example from WhatsApp or Instagram. This section stays hidden on the website until you add one.</p>
+        <div data-list="reviews"></div>
+        <button class="sm" type="button" data-ladd="reviews" style="align-self:start">+ Add review</button>
+      </div>
+      <div class="box">
+        <h3>Our story</h3>
+        <label class="fld" for="b-at">Heading<input id="b-at" data-b="about.title" maxlength="70"></label>
+        <label class="fld" for="b-ax">Story<textarea id="b-ax" data-b="about.text" rows="5" maxlength="900"></textarea></label>
+        <label class="fld" for="b-as">Signature name<input id="b-as" data-b="about.sign" maxlength="40"></label>
+        <div class="phrow"><span class="thumb" data-thumb="about.photo"></span><label class="sm">Change photo<input type="file" accept="image/*" data-ph="about.photo"></label><button class="sm red" type="button" data-phrm="about.photo">Remove</button></div>
+      </div>
+    </div>
+
+    <!-- Business info -->
+    <div class="panel" id="tab-business" hidden>
+      <div class="banner warn" id="regWarn">Business registration details are blank. Fill them in once your business is registered. Blank fields are not shown on the website.</div>
+      <div class="box">
+        <h3>Shop</h3>
+        <div class="two">
+          <label class="fld" for="b-n">Shop name<input id="b-n" data-b="shop.name" maxlength="30"></label>
+          <label class="fld" for="b-c">City (delivery area)<input id="b-c" data-b="shop.city" maxlength="25" readonly></label>
+        </div>
+        <label class="fld" for="b-fa">Footer description<textarea id="b-fa" data-b="shop.footAbout" rows="2" maxlength="200"></textarea></label>
+      </div>
+      <div class="box">
+        <h3>Owner and registration</h3>
+        <div class="two">
+          <label class="fld" for="r-o">Owner name<input id="r-o" data-b="reg.owner" maxlength="40"></label>
+          <label class="fld" for="r-b">Registered business name<input id="r-b" data-b="reg.business" maxlength="60"></label>
+        </div>
+        <div class="three">
+          <label class="fld" for="r-r">Registration no.<input id="r-r" data-b="reg.regNo" maxlength="40"></label>
+          <label class="fld" for="r-n">NTN<input id="r-n" data-b="reg.ntn" maxlength="20"></label>
+          <label class="fld" for="r-y">Established (year)<input id="r-y" data-b="reg.since" maxlength="4" inputmode="numeric" placeholder="2026"></label>
+        </div>
+        <label class="fld" for="r-a">Registered address<input id="r-a" data-b="reg.address" maxlength="120"></label>
+      </div>
+      <div class="box">
+        <h3>Contact</h3>
+        <div class="two">
+          <label class="fld" for="c-w">WhatsApp number (orders arrive here)<input id="c-w" data-b="shop.wa" inputmode="tel" placeholder="0300 1234567"></label>
+          <label class="fld" for="c-p">Call number (if different)<input id="c-p" data-b="shop.phone" inputmode="tel"></label>
+        </div>
+        <div class="two">
+          <label class="fld" for="c-e">Email<input id="c-e" data-b="shop.email" inputmode="email"></label>
+          <label class="fld" for="c-h">Timings<input id="c-h" data-b="shop.hours" placeholder="Mon–Sat, 11am–8pm"></label>
+        </div>
+        <label class="fld" for="c-a">Address / pickup point<input id="c-a" data-b="shop.address" maxlength="140"></label>
+        <div class="three">
+          <label class="fld" for="s-i">Instagram link<input id="s-i" data-b="social.insta" placeholder="https://instagram.com/…"></label>
+          <label class="fld" for="s-f">Facebook link<input id="s-f" data-b="social.fb" placeholder="https://facebook.com/…"></label>
+          <label class="fld" for="s-t">TikTok link<input id="s-t" data-b="social.tiktok" placeholder="https://tiktok.com/@…"></label>
+        </div>
+      </div>
+      <div class="box">
+        <h3>Policies</h3>
+        <label class="fld" for="po-h">How to order<textarea id="po-h" data-b="policies.howto" rows="4"></textarea></label>
+        <label class="fld" for="po-r">Refunds &amp; returns<textarea id="po-r" data-b="policies.refund" rows="4"></textarea></label>
+        <label class="fld" for="po-t">Terms &amp; conditions<textarea id="po-t" data-b="policies.terms" rows="4"></textarea></label>
+        <label class="fld" for="po-p">Privacy policy<textarea id="po-p" data-b="policies.privacy" rows="4"></textarea></label>
+      </div>
+    </div>
+
+    <!-- Payment & delivery -->
+    <div class="panel" id="tab-pay" hidden>
+      <div class="banner warn" id="payWarn">Payment accounts are blank. Add JazzCash, Easypaisa or bank details so customers can pay the advance.</div>
+      <div class="box">
+        <h3>Delivery and advance</h3>
+        <div class="two">
+          <label class="fld" for="d-l">Delivery charge, your city (Rs)<input id="d-l" data-b="shop.delLocal" data-n type="number" min="0" step="10"></label>
+          <label class="fld" for="d-f">Free delivery above (Rs)<input id="d-f" data-b="shop.freeAbove" data-n type="number" min="0" step="100"></label>
+        </div>
+        <label class="fld" for="d-a">Advance required<select id="d-a" data-b="shop.advancePct" data-n><option value="0">0% (cash on delivery)</option><option value="30">30%</option><option value="50">50%</option><option value="70">70%</option><option value="100">100% (full payment)</option></select></label>
+        <p class="hint">Orders are delivered within Multan only.</p>
+      </div>
+      <div class="box">
+        <h3>Payment accounts</h3>
+        <p class="hint">Blank accounts are not shown to customers.</p>
+        <div class="two">
+          <label class="fld" for="y-j">JazzCash number<input id="y-j" data-b="pay.jazz" inputmode="tel"></label>
+          <label class="fld" for="y-jn">JazzCash account title<input id="y-jn" data-b="pay.jazzName"></label>
+        </div>
+        <div class="two">
+          <label class="fld" for="y-e">Easypaisa number<input id="y-e" data-b="pay.easy" inputmode="tel"></label>
+          <label class="fld" for="y-en">Easypaisa account title<input id="y-en" data-b="pay.easyName"></label>
+        </div>
+        <div class="three">
+          <label class="fld" for="y-b">Bank name<input id="y-b" data-b="pay.bank"></label>
+          <label class="fld" for="y-bn">Account title<input id="y-bn" data-b="pay.bankName"></label>
+          <label class="fld" for="y-i">Account no. / IBAN<input id="y-i" data-b="pay.iban"></label>
+        </div>
+      </div>
+      <div class="box">
+        <h3>Add-ons (shown in the cart)</h3>
+        <div data-list="addons"></div>
+        <button class="sm" type="button" data-ladd="addons" style="align-self:start">+ Add-on</button>
+      </div>
+    </div>
+  </main>
+
+  <div class="savebar" id="saveBar" hidden>
+    <div class="wrap sbin">
+      <span class="st" id="saveSt">All changes published</span>
+      <div class="sbacts">
+        <button class="btn ghost" type="button" id="discardAll" hidden>Discard</button>
+        <button class="btn rose" type="button" id="saveAll" disabled>Publish changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="../assets/common.js"></script>
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
