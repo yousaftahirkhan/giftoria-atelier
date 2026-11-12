@@ -216,18 +216,21 @@ function buildOrder(){
     area:$("fArea").value.trim(),addr:$("fAddr").value.trim(),need:$("fDate").value,note:$("fNote").value.trim(),card:$("fCard").value.trim()};
 }
 /* The shop's super admin reads this exact message format back in (Orders → Add an order from WhatsApp). */
+const trackUrl=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"#track="+encodeURIComponent(no);
 function orderText(o){
-  const L=[`*New Order — ${o.no}*`,`Shop: ${S.shop.name}`,""];
-  o.items.forEach(i=>L.push(`• ${i.name} x${i.qty} = ${rs(i.price*i.qty)}`));
+  const day=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+  const L=[`*${S.shop.name} | New Order*`,`Tracking ID: *${o.no}*`,`Date: ${day}`,"","*Items*"];
+  o.items.forEach(i=>L.push(`• ${i.name} × ${i.qty} — ${rs(i.price*i.qty)}`));
   L.push("",`Subtotal: ${rs(o.sub+o.addT)}`,`Delivery: ${o.del?rs(o.del):"Free"}`,`*Total: ${rs(o.tot)}*`);
-  if(o.pct){L.push(`Advance (${o.pct}%): ${rs(o.adv)}`);if(o.rest>0)L.push(`Balance on delivery: ${rs(o.rest)}`)}
-  const acc=o.pct?payAccounts(S):[];
-  if(acc.length){L.push("","Pay the advance to:");acc.forEach(a=>L.push(`- ${a.k} ${a.v}${a.who?" ("+a.who+")":""}`))}
-  L.push("",`Name: ${o.name}`,`Phone: ${o.phone}`,`City: ${o.city}`,...(o.area?[`Area: ${o.area}`]:[]),`Address: ${o.addr}`);
+  if(o.pct){L.push(`Advance due (${o.pct}%): ${rs(o.adv)}`);if(o.rest>0)L.push(`Balance on delivery: ${rs(o.rest)}`)}
+  L.push("","*Delivery details*",`Name: ${o.name}`,`Phone: ${o.phone}`,`City: ${o.city}`,...(o.area?[`Area: ${o.area}`]:[]),`Address: ${o.addr}`);
   if(o.need)L.push(`Needed by: ${fmtDate(o.need)}`);
-  if(o.card)L.push(`Card: ${o.card}`);
+  if(o.card)L.push(`Card message: ${o.card}`);
   if(o.note)L.push(`Note: ${o.note}`);
-  if(o.pct)L.push("",`Status: Awaiting payment`,`I will share the payment screenshot in this chat.`);
+  const acc=o.pct?payAccounts(S):[];
+  if(o.pct){L.push("","*Payment*");acc.forEach(a=>L.push(`${a.k}: ${a.v}${a.who?" ("+a.who+")":""}`));
+    L.push(`Status: Awaiting payment. I will share the payment screenshot in this chat.`)}
+  L.push("",`Track your order: ${trackUrl(o.no)}`);
   return L.join("\n");
 }
 const setMsg=(id,t,err)=>{$(id).textContent=t;$(id).className="msg"+(err?" err":"")};
@@ -317,6 +320,17 @@ $("ordersBody").addEventListener("click",e=>{
   if(e.target.closest("#clearOrders")){myOrders=[];save("gd-orders",myOrders);renderMyOrders()}
 });
 
+$("trackForm").addEventListener("submit",async e=>{
+  e.preventDefault();const no=$("tNo").value.trim().toUpperCase(),phone=$("tPhone").value.trim();
+  if(!ORDER_NO_RE.test(no)){$("tResult").textContent="Enter the tracking ID from your order message, e.g. GA-261112-K7Q4.";return}
+  if(phone.replace(/\D/g,"").length<10){$("tResult").textContent="Enter the phone number used for the order.";return}
+  $("tResult").textContent="Checking…";
+  try{const r=await fetch(ORDER_API+"/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orders:[{no,phone}]})});
+    const t=r.ok?((await r.json()).orders||{})[no]:null;
+    $("tResult").innerHTML=t?`Order <b>${esc(no)}</b>: <b>${esc(t.label)}</b>`:"No order found with this tracking ID and phone number. If you have just placed it, please make sure the WhatsApp message was sent.";
+  }catch(err){$("tResult").textContent="Could not check right now. Please try again."}
+});
+
 /* ---------- overlays ---------- */
 let openPanel=null;
 function show(panel){if(openPanel)openPanel.hidden=true;openPanel=panel;$("scrim").hidden=!panel;if(panel){panel.hidden=false;const c=panel.querySelector("[data-close]");if(c)c.focus()}}
@@ -337,5 +351,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")show(null)});
   }catch(e){$("loader").hidden=true;$("loadErr").hidden=false;return}
   $("loader").hidden=true;$("app").hidden=false;
   renderAll();
+  const tr=(location.hash.match(/^#track=([^&]+)/)||[])[1];
+  if(tr){$("tNo").value=decodeURIComponent(tr).toUpperCase();try{$("tPhone").value=load("gd-cust",{}).fPhone||""}catch(e){}show($("ordersDrawer"));trackOrders();if($("tPhone").value)$("trackForm").requestSubmit();return}
   if(location.hash&&location.hash.length>1){const t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
 })();

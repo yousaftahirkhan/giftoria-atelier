@@ -83,9 +83,12 @@ function payAccounts(S){const p=S.pay||{},a=[];
   if(p.easy)a.push({k:"Easypaisa",v:p.easy,who:p.easyName});
   if(p.iban)a.push({k:p.bank||"Bank transfer",v:p.iban,who:p.bankName});return a}
 
-/* Order numbers look like GA-1112-576: shop initials, month and day, three random digits. */
+/* Tracking IDs look like GA-261112-K7Q4: shop initials, order date (YYMMDD) and four random characters
+   without look-alikes (no O/0, I/1, L), so customers can read them out on a call. */
+const ORDER_NO_RE=/^[A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4})$/;
 function makeOrderNo(shopName){
   const ini=(shopName||"").split(/\s+/).map(w=>w[0]||"").join("").replace(/[^A-Za-z]/g,"").slice(0,3).toUpperCase()||"OR";
-  const d=new Date();const mmdd=String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
-  return `${ini}-${mmdd}-${String(Math.floor(100+Math.random()*900))}`;
+  const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const A="23456789ABCDEFGHJKMNPQRSTUVWXYZ",r=crypto.getRandomValues(new Uint8Array(4));
+  return `${ini}-${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${Array.from(r,b=>A[b%A.length]).join("")}`;
 }

@@ -281,11 +281,11 @@ $("oList").addEventListener("click", async e => {
 function parseOrder(raw) {
   const t = raw.replace(/\*/g, "").replace(/\r/g, "");
   const g = re => { const m = t.match(re); return m ? m[1].trim() : "" };
-  const items = []; t.split("\n").forEach(l => { const m = l.match(/^\s*[•\-]\s*(.+?)\s+x(\d+)\s*=\s*Rs\.?\s*([\d,]+)/i); if (m) { const q = +m[2]; items.push({name: m[1].trim(), qty: q, price: Math.round(num(m[3]) / q)}) } });
-  const o = {no: g(/Order\s*[—–\-:#]*\s*([A-Z]{1,4}-\d{4}-\d{2,5})/i).toUpperCase(), items,
+  const items = []; t.split("\n").forEach(l => { const m = l.match(/^\s*[•\-]\s*(.+?)\s+[x×]\s*(\d+)\s*(?:=|—|–|-)\s*Rs\.?\s*([\d,]+)/i); if (m) { const q = +m[2]; items.push({name: m[1].trim(), qty: q, price: Math.round(num(m[3]) / q)}) } });
+  const o = {no: g(/(?:Order|Tracking ID)\s*[—–\-:#*]*\s*\*?([A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4}))/i).toUpperCase(), items,
     del: num(g(/Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/Advance[^:\n]*:\s*Rs\.?\s*([\d,]+)/i)),
     name: g(/(?:Naam|Name):\s*(.+)/i), phone: g(/Phone:\s*(.+)/i), city: g(/City:\s*(.+)/i), addr: g(/Address:\s*(.+)/i), area: g(/Area:\s*(.+)/i),
-    needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), card: g(/Card:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};
+    needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), card: g(/Card(?: message)?:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};
   if (!o.tot && items.length) o.tot = items.reduce((s, i) => s + i.price * i.qty, 0) + o.del;
   if (!o.no) o.no = makeOrderNo(S.shop.name);
   o.rest = Math.max(0, o.tot - o.adv);

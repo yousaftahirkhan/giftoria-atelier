@@ -184,3 +184,4 @@ footer button.fl:hover{opacity:1;text-decoration:underline}
 }
 .ostatus{font-size:14px;border-radius:10px;padding:6px 10px;background:var(--blush)}
 .ostatus[data-s="paid"],.ostatus[data-s="making"],.ostatus[data-s="sent"],.ostatus[data-s="done"]{background:#E3F2EC;color:#1D6F4A}
+.trackbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}

@@ -144,7 +144,16 @@
 
 <aside class="drawer" id="ordersDrawer" hidden aria-label="My orders">
   <div class="dhead"><h2>My orders</h2><button class="x" data-close aria-label="Close">×</button></div>
-  <div class="dbody" id="ordersBody"></div>
+  <div class="dbody">
+    <form class="form trackbox" id="trackForm" novalidate>
+      <b>Track an order</b>
+      <div class="two"><label for="tNo">Tracking ID<input id="tNo" autocapitalize="characters" placeholder="GA-261112-K7Q4"></label>
+      <label for="tPhone">Phone number<input id="tPhone" inputmode="tel" placeholder="0312 3456789"></label></div>
+      <button class="btn em block" type="submit">Track</button>
+      <div id="tResult" class="note" aria-live="polite"></div>
+    </form>
+    <div id="ordersBody" style="display:flex;flex-direction:column;gap:14px"></div>
+  </div>
 </aside>
 
 <aside class="drawer" id="drawer" hidden aria-label="Cart">

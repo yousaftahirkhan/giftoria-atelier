@@ -135,7 +135,7 @@ async function placeOrder(request, env) {
   if (limited(request, "order", 10)) return reply(request, env, {error: "too_many"}, 429);
   const o = (await request.json().catch(() => ({}))).order || {};
   const no = str(o.no, 20).toUpperCase();
-  if (!/^[A-Z]{1,4}-\d{4}-\d{2,5}$/.test(no)) return reply(request, env, {error: "bad_order"}, 400);
+  if (!/^[A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4})$/.test(no)) return reply(request, env, {error: "bad_order"}, 400);
   const items = (Array.isArray(o.items) ? o.items : []).slice(0, 30).map(i => ({name: str(i.name, 80), qty: Math.max(1, Math.min(99, Math.round(+i.qty || 1))), price: money(i.price)})).filter(i => i.name);
   const phone = str(o.phone, 20);
   if (!items.length || !str(o.name, 80) || digits(phone).length < 10) return reply(request, env, {error: "bad_order"}, 400);
