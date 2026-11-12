@@ -231,7 +231,7 @@ function orderText(o){
   if(o.note)L.push(`Note: ${o.note}`);
   const acc=o.pct?payAccounts(S):[];
   if(o.pct){L.push("","*Payment*");acc.forEach(a=>L.push(`${a.k}: ${a.v}${a.who?" ("+a.who+")":""}`));
-    L.push(`Status: Awaiting payment. I will share the payment screenshot in this chat.`)}
+    L.push(`I will send the payment screenshot in this chat.`)}
   return L.join("\n");
 }
 const setMsg=(id,t,err)=>{$(id).textContent=t;$(id).className="msg"+(err?" err":"")};
