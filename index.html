@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=v9eedabdd">
-<link rel="stylesheet" href="assets/store.css?v=v9eedabdd">
+<link rel="stylesheet" href="assets/base.css?v=v97436fac">
+<link rel="stylesheet" href="assets/store.css?v=v97436fac">
 </head>
 <body>
 
@@ -162,16 +162,13 @@
   <div class="dbody" id="cartStep">
     <div id="lines"></div>
     <div id="addonBox" class="form sep"></div>
-    <form class="form sep" id="orderForm" novalidate>
-      <label for="fCard">Gift card message (optional)<textarea id="fCard" rows="2" maxlength="160" placeholder="Happy Birthday Sara! With love"></textarea></label>
+  </div>
+  <div class="dbody" id="detailsStep" hidden>
+    <button class="sm" id="toCartBtn" type="button" style="align-self:start">← Back to cart</button>
+    <form class="form" id="orderForm" novalidate>
       <label for="fName">Full name<input id="fName" autocomplete="name" placeholder="Ayesha Khan"></label>
       <label for="fPhone">Phone / WhatsApp<input id="fPhone" inputmode="tel" autocomplete="tel" placeholder="0312 3456789"></label>
-      <label for="fCity">City<select id="fCity"><option value="local">Multan</option></select></label>
-      <label for="fArea">Area<input id="fArea" list="areaList" placeholder="e.g. Gulgasht Colony"></label>
-      <datalist id="areaList"><option value="Bosan Road"></option><option value="Cantt"></option><option value="DHA Multan"></option><option value="Garden Town"></option><option value="Gulgasht Colony"></option><option value="Hussain Agahi"></option><option value="Model Town"></option><option value="Mumtazabad"></option><option value="New Multan"></option><option value="Shah Rukn-e-Alam Colony"></option><option value="Shalimar Colony"></option><option value="Wapda Town"></option></datalist>
-      <label for="fAddr">Address<textarea id="fAddr" rows="2" placeholder="House, street, area"></textarea></label>
-      <label for="fDate">Needed by<input id="fDate" type="date"></label>
-      <label for="fNote">Note (colours, size)<input id="fNote" placeholder="e.g. pink and white"></label>
+      <label for="fAddr">Delivery address<textarea id="fAddr" rows="3" placeholder="House number, street, area, Multan"></textarea></label>
     </form>
   </div>
   <div class="totals" id="cartTotals">
@@ -180,8 +177,9 @@
     <div class="r"><span>Delivery (inDrive)</span><span id="tDel">Paid to rider</span></div>
     <div class="r grand"><span>Total</span><span id="tTot">Rs 0</span></div>
     <div class="r adv" id="tAdvRow"><span id="tAdvLbl">Advance</span><span id="tAdv">Rs 0</span></div>
-    <a class="btn wa block" id="confirmBtn" href="#" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg> Place order on WhatsApp</a>
-    <p class="note" style="text-align:center;font-size:13px">Delivery is by inDrive: you pay the rider's fare on delivery. Your WhatsApp chat with us opens with the order ready. Just tap Send.</p>
+    <button class="btn rose block" id="checkoutBtn" type="button">Continue to checkout →</button>
+    <a class="btn wa block" id="confirmBtn" href="#" target="_blank" rel="noopener" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg> Place order on WhatsApp</a>
+    <p class="note" id="confirmNote" style="text-align:center;font-size:13px" hidden>Delivery is by inDrive: you pay the rider's fare on delivery. Your WhatsApp chat with us opens with the order ready. Just tap Send.</p>
     <div class="msg" id="msg"></div>
   </div>
   <div class="dbody" id="payStep" hidden>
@@ -200,7 +198,7 @@
 </aside>
 <div class="toast" id="toast" hidden></div>
 
-<script src="assets/common.js?v=v9eedabdd"></script>
-<script src="assets/store.js?v=v9eedabdd"></script>
+<script src="assets/common.js?v=v97436fac"></script>
+<script src="assets/store.js?v=v97436fac"></script>
 </body>
 </html>

@@ -108,7 +108,6 @@ function renderChrome(){
   $("announce").textContent=s.announce||"";$("announce").parentElement.hidden=!s.announce;
   $("shopName").textContent=s.name||"Shop";$("footName").textContent=s.name||"";
   $("footAbout").textContent=s.footAbout||"";
-  $("fCity").innerHTML=`<option value="local">${esc(s.city||"Multan")}</option>`;
   $("trustDelT").textContent="Delivery across "+(s.city||"Multan");
   $("trustPayT").textContent=pct?(pct>=100?"Full payment upfront":pct+"% advance"):"Cash on delivery";
   $("trustPay").textContent=pct?(payAccounts(S).map(a=>a.k).join(", ")||"JazzCash, Easypaisa, bank"):"Pay on delivery";
@@ -161,7 +160,7 @@ function openQV(id,keep){
       ${p.soldOut?"":`<button class="link" style="align-self:start" id="qvCart">View cart →</button>`}
     </div>`;
   if(!keep)show($("qvModal"));
-  const qc=$("qvCart");if(qc)qc.onclick=()=>show($("drawer"));
+  const qc=$("qvCart");if(qc)qc.onclick=()=>openCart();
 }
 const POL_T={howto:"How to order",refund:"Refunds & returns",terms:"Terms & conditions",privacy:"Privacy policy"};
 function openPolicy(k){$("polTitle").textContent=POL_T[k]||"";$("polBody").textContent=(S.policies||{})[k]||"Coming soon.";show($("polModal"))}
@@ -189,7 +188,7 @@ function totals(){
 function renderCart(){
   cleanCart();const ids=Object.keys(cart);const n=ids.reduce((s,id)=>s+cart[id],0);
   $("cartCount").textContent=n;$("cartCount").hidden=!n;
-  $("cartFloat").hidden=!n;$("cartFloatTxt").textContent=`View cart (${n}) · ${rs(ids.reduce((s,id)=>s+(findP(id)?.price||0)*cart[id],0))}`;
+  $("cartFloat").hidden=!n;$("checkoutBtn").disabled=!n;$("cartFloatTxt").textContent=`View cart (${n}) · ${rs(ids.reduce((s,id)=>s+(findP(id)?.price||0)*cart[id],0))}`;
   $("lines").innerHTML=ids.length?ids.map(id=>{const p=findP(id);return `<div class="line"><div class="mini">${visual(p,"")}</div>
     <div><div class="nm">${esc(p.name)}</div><div class="sub">${rs(p.price)} each</div></div>
     <div class="qty"><button data-d="-1" data-id="${esc(id)}" aria-label="Decrease">−</button><span>${cart[id]}</span><button data-d="1" data-id="${esc(id)}" aria-label="Increase">+</button></div></div>`}).join("")
@@ -204,8 +203,7 @@ function renderCart(){
 $("lines").addEventListener("click",e=>{const b=e.target.closest("button[data-d]");if(!b)return;const id=b.dataset.id;
   cart[id]+=+b.dataset.d;if(cart[id]<=0)delete cart[id];persist();refreshProducts()});
 $("addonBox").addEventListener("change",e=>{const c=e.target.closest("[data-ad]");if(!c)return;addSel[c.dataset.ad]=c.checked;renderCart()});
-{const d=load("gd-cust",{});["fName","fPhone","fArea","fAddr"].forEach(k=>{if(d[k])$(k).value=d[k]})}
-$("fDate").min=new Date(Date.now()+864e5).toISOString().slice(0,10);
+{const d=load("gd-cust",{});["fName","fPhone","fAddr"].forEach(k=>{if(d[k])$(k).value=d[k]})}
 
 let ORDER=null;
 function buildOrder(){
@@ -213,7 +211,7 @@ function buildOrder(){
   const items=Object.entries(cart).map(([id,q])=>{const p=findP(id);return{name:p.name,qty:q,price:p.price}});
   t.adds.forEach(a=>items.push({name:"Add-on: "+a.name,qty:1,price:+a.price||0}));
   return {no:makeOrderNo(S.shop.name),items,...t,name:$("fName").value.trim(),phone:$("fPhone").value.trim(),city:S.shop.city||"Multan",
-    area:$("fArea").value.trim(),addr:$("fAddr").value.trim(),need:$("fDate").value,note:$("fNote").value.trim(),card:$("fCard").value.trim()};
+    area:"",addr:$("fAddr").value.trim(),need:"",note:"",card:""};
 }
 /* The shop's super admin reads this exact message format back in (Orders → Add an order from WhatsApp). */
 const trackUrl=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"#track="+encodeURIComponent(no);
@@ -264,7 +262,7 @@ function showPay(){
     $("payNote").textContent="Your WhatsApp chat with us has opened with this order. Tap Send there. You pay on delivery.";
   }
   $("waBtn").href=waLink(o);
-  $("cartStep").hidden=true;$("cartTotals").hidden=true;$("payStep").hidden=false;setMsg("msg2","");
+  setStep("pay");setMsg("msg2","");
 }
 $("accts").addEventListener("click",e=>{const b=e.target.closest("[data-cp]");if(!b)return;const el=$("acv"+b.dataset.cp);
   navigator.clipboard.writeText(el.textContent).then(()=>toast("Account number copied")).catch(()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Number selected. Copy it manually.")})});
@@ -273,16 +271,26 @@ const waLink=o=>"https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent(typ
    shop's WhatsApp chat before the browser follows it, so one tap places the order and opens the chat. */
 $("confirmBtn").addEventListener("click",e=>{
   const err=check();if(err){e.preventDefault();setMsg("msg",err,true);return}setMsg("msg","");
-  save("gd-cust",{fName:$("fName").value,fPhone:$("fPhone").value,fArea:$("fArea").value,fAddr:$("fAddr").value});
+  save("gd-cust",{fName:$("fName").value,fPhone:$("fPhone").value,fAddr:$("fAddr").value});
   ORDER=buildOrder();$("confirmBtn").href=waLink(ORDER);rememberOrder(ORDER);sendOrder(ORDER);showPay();
 });
 $("waBtn").addEventListener("click",()=>setMsg("msg2","Opening WhatsApp. If it does not open, copy the message and send it to "+S.shop.wa+"."));
 $("copyBtn").onclick=()=>navigator.clipboard.writeText(orderText(ORDER)).then(()=>setMsg("msg2","Message copied. Paste it in a WhatsApp chat with "+S.shop.wa+"."))
   .catch(()=>{setMsg("msg2","Could not copy. Select the text below and copy it.",true);
     let ta=$("fallbackTxt");if(!ta){ta=document.createElement("textarea");ta.id="fallbackTxt";ta.rows=8;$("payStep").appendChild(ta)}ta.value=orderText(ORDER);ta.select()});
-function backToCart(){$("cartTitle").textContent="Your cart";$("cartStep").hidden=false;$("cartTotals").hidden=false;$("payStep").hidden=true}
+/* The drawer has three steps: cart (items and add-ons) → details (delivery form, place order) → pay (receipt). */
+let STEP="cart";
+function setStep(s){STEP=s;
+  $("cartTitle").textContent=s==="cart"?"Your cart":s==="details"?"Delivery details":$("cartTitle").textContent;
+  $("cartStep").hidden=s!=="cart";$("detailsStep").hidden=s!=="details";$("payStep").hidden=s!=="pay";$("cartTotals").hidden=s==="pay";
+  $("checkoutBtn").hidden=s!=="cart";$("confirmBtn").hidden=s!=="details";$("confirmNote").hidden=s!=="details";setMsg("msg","");
+  const b=$("drawer").querySelector(s==="details"?"#detailsStep":"#cartStep");if(b)b.scrollTop=0}
+function backToCart(){setStep("cart")}
+$("checkoutBtn").onclick=()=>{if(!Object.keys(cart).length){setMsg("msg","Please add an item to your cart.",true);return}setStep("details");setTimeout(()=>$("fName").focus(),50)};
+$("toCartBtn").onclick=()=>setStep("cart");
+const openCart=()=>{if(STEP!=="pay")setStep("cart");show($("drawer"))};
 $("backBtn").onclick=backToCart;
-$("newOrderBtn").onclick=()=>{cart={};addSel={};persist();ORDER=null;["fNote","fDate","fCard"].forEach(k=>$(k).value="");refreshProducts();backToCart();toast("Cart cleared")};
+$("newOrderBtn").onclick=()=>{cart={};addSel={};persist();ORDER=null;refreshProducts();backToCart();toast("Cart cleared")};
 
 /* Saves the order for the shop. WhatsApp still opens either way, so a network problem never blocks the customer. */
 function sendOrder(o){
@@ -335,8 +343,8 @@ $("trackForm").addEventListener("submit",async e=>{
 /* ---------- overlays ---------- */
 let openPanel=null;
 function show(panel){if(openPanel)openPanel.hidden=true;openPanel=panel;$("scrim").hidden=!panel;if(panel){panel.hidden=false;const c=panel.querySelector("[data-close]");if(c)c.focus()}}
-$("openCart").onclick=()=>show($("drawer"));
-$("cartFloat").onclick=()=>show($("drawer"));
+$("openCart").onclick=openCart;
+$("cartFloat").onclick=openCart;
 $("openWish").onclick=()=>show($("wishDrawer"));
 $("openOrders").onclick=()=>{show($("ordersDrawer"));trackOrders()};
 $("openSearch").onclick=()=>{show(null);$("shop").scrollIntoView({behavior:"smooth"});setTimeout(()=>$("q").focus(),400)};
