@@ -28,7 +28,7 @@ function card(p){
     <button class="heart" data-wish="${esc(p.id)}" aria-pressed="${inW}" aria-label="Wishlist">${inW?"♥":"♡"}</button></div>
     <div class="body"><span class="cat">${esc(CATN[p.cat]||"")}</span><h3>${esc(p.name)}</h3><span class="sub">${esc(p.spec)}</span>
       <div class="prices"><span class="price">${rs(p.price)}</span>${p.was>p.price?`<span class="was">${rs(p.was)}</span>`:""}</div></div>
-    <div class="acts">${p.soldOut?`<button class="add" disabled>Sold out</button>`:`<button class="add${cart[p.id]?" done":""}" data-add="${esc(p.id)}">${cart[p.id]?"✓ Added ("+cart[p.id]+")":"Add to cart"}</button>`}<button class="qv" data-qv="${esc(p.id)}">View</button></div>
+    <div class="acts">${p.soldOut?`<button class="add" disabled>Sold out</button>`:cart[p.id]?`<div class="stepper" role="group" aria-label="Quantity of ${esc(p.name)}"><button type="button" data-step-id="${esc(p.id)}" data-step-d="-1" aria-label="Remove one">−</button><span>${cart[p.id]} in cart</span><button type="button" data-step-id="${esc(p.id)}" data-step-d="1" aria-label="Add one">+</button></div>`:`<button class="add" data-add="${esc(p.id)}">Add to cart</button>`}<button class="qv" data-qv="${esc(p.id)}">View</button></div>
   </article>`;
 }
 let slideI=0,slideT=null;
@@ -85,7 +85,38 @@ $("catChips").addEventListener("click",e=>{const b=e.target.closest("[data-cat]"
 $("occSel").onchange=e=>{F.occ=e.target.value;renderShop()};
 $("sortSel").onchange=e=>{F.sort=e.target.value;renderShop()};
 $("q").addEventListener("input",e=>{F.q=e.target.value.trim();renderShop()});
-function goShop(cat,occ){F.cat=cat||"all";F.occ=occ||"";F.q="";$("q").value="";renderShop();show(null);$("shop").scrollIntoView({behavior:"smooth"})}
+function goShop(cat,occ){closeMega();F.cat=cat||"all";F.occ=occ||"";F.q="";$("q").value="";renderShop();show(null);$("shop").scrollIntoView({behavior:"smooth"})}
+
+/* ---------- category menu: picture tiles, side menu and desktop dropdown ---------- */
+function catInfo(){
+  return CATS.map(([k,l])=>{const items=S.products.filter(p=>p.cat===k),live=items.filter(p=>!p.soldOut);
+    const pick=live.find(p=>p.photo&&p.best)||live.find(p=>p.photo)||items.find(p=>p.photo)||items[0];
+    return {k,l,n:items.length,from:live.length?Math.min(...live.map(p=>p.price)):0,pick}}).filter(c=>c.n);
+}
+const catPic=c=>c.pick?(c.pick.photo?`<img src="${esc(photoSrc(c.pick.photo))}" alt="" loading="lazy">`:drawArt(c.pick.art||DEFAULT_ART[c.k])):drawArt(DEFAULT_ART[c.k]);
+const customWa=()=>"https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent("Hello! I would like a custom design from "+(S.shop.name||"your shop")+".");
+function renderCategories(){
+  $("cats").innerHTML=catInfo().map(c=>`<button class="cattile" type="button" data-goshop="${c.k}" data-goocc="">
+      <span class="ph">${catPic(c)}${c.pick&&c.pick.photo&&c.pick.sample?SAMPLE_TAG:""}</span>
+      <span class="cap"><b>${esc(c.l)}</b><span>${c.n} item${c.n>1?"s":""}${c.from?" · from "+rs(c.from):""}</span></span></button>`).join("")
+    +`<a class="cattile custom" href="${esc(customWa())}" target="_blank" rel="noopener"><span class="ph"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/><path d="M12 9v4M10 11h4"/></svg></span>
+      <span class="cap"><b>Custom design</b><span>Your colours, your idea. Ask on WhatsApp</span></span></a>`;
+}
+function renderMenu(){
+  const cats=catInfo();
+  $("menuCats").innerHTML=cats.map(c=>`<button type="button" class="menu-cat" data-goshop="${c.k}" data-goocc=""><span class="th">${catPic(c)}</span><span class="t"><b>${esc(c.l)}</b><span>${c.n} item${c.n>1?"s":""}${c.from?" · from "+rs(c.from):""}</span></span><span class="go">›</span></button>`).join("");
+  $("menuOccs").innerHTML=OCCS.map(([k,l])=>`<button class="chip" type="button" data-goshop="all" data-goocc="${k}">${l}</button>`).join("");
+  $("megaGrid").innerHTML=cats.map(c=>`<button type="button" class="mega-tile" data-goshop="${c.k}" data-goocc=""><span class="th">${catPic(c)}</span><b>${esc(c.l)}</b><span>${c.n} item${c.n>1?"s":""}</span></button>`).join("")
+    +`<a class="mega-tile" href="${esc(customWa())}" target="_blank" rel="noopener"><span class="th custom">+</span><b>Custom design</b><span>Ask on WhatsApp</span></a>`;
+  $("menuWa").href="https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent("Hello! I have a question about "+(S.shop.name||"your shop")+".");
+}
+function closeMega(){$("mega").hidden=true;$("megaBtn").setAttribute("aria-expanded","false")}
+$("megaBtn").onclick=e=>{e.stopPropagation();const open=$("mega").hidden;$("mega").hidden=!open;$("megaBtn").setAttribute("aria-expanded",String(open))};
+document.addEventListener("click",e=>{if(!$("mega").hidden&&!e.target.closest("#mega")&&!e.target.closest("#megaBtn"))closeMega()});
+$("openMenu").onclick=()=>show($("menuDrawer"));
+$("menuDrawer").addEventListener("click",e=>{const m=e.target.closest("[data-menu]");if(!m)return;const k=m.dataset.menu;
+  if(k==="orders")return show($("ordersDrawer"));if(k==="wish")return show($("wishDrawer"));
+  show(null);$(k==="howto"?"howto":"contact").scrollIntoView({behavior:"smooth"})});
 
 function renderRail(){$("rail").innerHTML=CATS.map(([k,l])=>`<button data-goshop="${k}" data-goocc="">${l}</button>`).join("")+OCCS.slice(0,3).map(([k,l])=>`<button data-goshop="all" data-goocc="${k}">${l}</button>`).join("")}
 function renderGallery(){
@@ -131,11 +162,13 @@ function renderChrome(){
   if(soc.length)boxes.push(`<div class="cbox"><span class="k">Social</span><span class="s">New designs appear here first</span><div class="social">${soc.map(([k,l])=>`<a class="sm" href="${esc(safeUrl(S.social[k]))}" target="_blank" rel="noopener">${l}</a>`).join("")}</div></div>`);
   $("contactBoxes").innerHTML=boxes.join("");
 }
-function renderAll(){renderChrome();renderRail();renderHero();renderOccasions();renderShelves();renderPromo();renderShop();renderGallery();renderReviews();renderStory();renderCart();renderWish();renderMyOrders()}
+function renderAll(){renderChrome();renderRail();renderCategories();renderMenu();renderHero();renderOccasions();renderShelves();renderPromo();renderShop();renderGallery();renderReviews();renderStory();renderCart();renderWish();renderMyOrders()}
 
 /* ---------- global clicks: add, wish, quick view, navigation ---------- */
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-add]"),w=e.target.closest("[data-wish]"),q=e.target.closest("[data-qv]"),g=e.target.closest("[data-goshop]"),pol=e.target.closest("[data-policy]");
+  const stp=e.target.closest("[data-step-id]");
+  if(stp){const id=stp.dataset.stepId;cart[id]=(cart[id]||0)+ +stp.dataset.stepD;if(cart[id]<=0){delete cart[id];toast("Removed from cart")}persist();refreshProducts();return}
   if(a){const p=findP(a.dataset.add);if(!p||p.soldOut)return;cart[p.id]=(cart[p.id]||0)+1;persist();refreshProducts();toast(p.name+" added to cart");return}
   if(w){const id=w.dataset.wish;wish=wish.includes(id)?wish.filter(x=>x!==id):[...wish,id];persist();refreshProducts();toast(wish.includes(id)?"Saved to wishlist":"Removed from wishlist");return}
   if(q){openQV(q.dataset.qv);return}
@@ -336,7 +369,7 @@ $("openOrders").onclick=()=>show($("ordersDrawer"));
 $("openSearch").onclick=()=>{show(null);$("shop").scrollIntoView({behavior:"smooth"});setTimeout(()=>$("q").focus(),400)};
 $("scrim").onclick=()=>show(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>show(null));
-document.addEventListener("keydown",e=>{if(e.key==="Escape")show(null)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){show(null);closeMega()}});
 
 /* ---------- start: load the published shop data ---------- */
 (async()=>{

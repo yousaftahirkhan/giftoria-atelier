@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=v4357f1aq">
-<link rel="stylesheet" href="assets/store.css?v=v4357f1aq">
+<link rel="stylesheet" href="assets/base.css?v=vc394292d">
+<link rel="stylesheet" href="assets/store.css?v=vc394292d">
 </head>
 <body>
 
@@ -19,9 +19,14 @@
 <header class="top">
   <div class="wrap">
     <div class="bar">
-      <a class="logo" href="#top" id="top"><span id="logoArt"></span><b id="shopName">Giftoria Atelier</b></a>
+      <div class="brand">
+        <button class="ib menu-btn" id="openMenu" type="button" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <a class="logo" href="#top" id="top"><span id="logoArt"></span><b id="shopName">Giftoria Atelier</b></a>
+      </div>
       <nav class="nav" aria-label="Main">
-        <a href="#shop">Shop</a><a href="#occasions">Occasions</a><a href="#story">Our story</a><a href="#contact">Contact</a>
+        <a href="#shop">Shop</a>
+        <button class="navbtn" id="megaBtn" type="button" aria-expanded="false" aria-controls="mega">Categories <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <a href="#occasions">Occasions</a><a href="#howto">How to order</a><a href="#contact">Contact</a>
       </nav>
       <div class="icons">
         <button class="ib" id="openSearch" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
@@ -32,6 +37,7 @@
     </div>
     <div class="rail" id="rail" aria-label="Categories"></div>
   </div>
+  <div class="mega" id="mega" hidden><div class="wrap"><div class="mega-grid" id="megaGrid"></div></div></div>
 </header>
 
 <div class="wrap loader" id="loader" role="status">Loading the shop…</div>
@@ -48,6 +54,11 @@
     <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg></span><span><b>Never wilts</b>Keeps its shape for years</span></div>
     <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></span><span><b id="trustDelT">Delivery across Multan</b><span id="trustDel">By inDrive, to your door</span></span></div>
     <div><span class="i"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span><b id="trustPayT">50% advance</b><span id="trustPay">JazzCash, Easypaisa, bank</span></span></div>
+  </section>
+
+  <section class="wrap sec" id="categories">
+    <div class="sec-head"><div><div class="eyebrow">Browse the menu</div><h2>Shop by category</h2></div><button class="link" data-goshop="all" data-goocc="">View all products →</button></div>
+    <div class="cats" id="cats"></div>
   </section>
 
   <section class="wrap sec" id="occasions">
@@ -88,6 +99,16 @@
   <section class="wrap sec" id="revSec" hidden>
     <div class="sec-head"><div><div class="eyebrow">Kind words</div><h2>Reviews</h2></div></div>
     <div class="reviews" id="reviews"></div>
+  </section>
+
+  <section class="wrap sec" id="howto">
+    <div class="sec-head"><div><div class="eyebrow">Simple and secure</div><h2>How ordering works</h2></div></div>
+    <ol class="steps">
+      <li><span class="n">1</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><b>Choose your gifts</b><span>Add bouquets, keepsakes and little extras to your cart.</span></li>
+      <li><span class="n">2</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg><b>Place your order</b><span>Enter your name, phone, area and date. Your order opens in WhatsApp, ready to send.</span></li>
+      <li><span class="n">3</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><b>Pay and share the screenshot</b><span>We reply with our JazzCash and Easypaisa details. Pay the full amount and send the screenshot.</span></li>
+      <li><span class="n">4</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><b>Handmade and delivered</b><span>We make your order by hand and send it with an inDrive rider. You pay the rider's fare.</span></li>
+    </ol>
   </section>
 
   <section class="wrap sec story" id="story">
@@ -137,6 +158,25 @@
   <div class="dhead"><h2 id="polTitle"></h2><button class="x" data-close aria-label="Close">×</button></div>
   <div class="policy" id="polBody"></div>
 </div>
+
+<aside class="drawer left" id="menuDrawer" hidden aria-label="Menu">
+  <div class="dhead"><h2>Menu</h2><button class="x" data-close aria-label="Close">×</button></div>
+  <div class="dbody menu-body">
+    <button class="menu-all" type="button" data-goshop="all" data-goocc="">Shop all products <span>→</span></button>
+    <div class="menu-h">Categories</div>
+    <div class="menu-cats" id="menuCats"></div>
+    <div class="menu-h">Occasions</div>
+    <div class="chips" id="menuOccs"></div>
+    <div class="menu-h">Help</div>
+    <div class="menu-links">
+      <button type="button" data-menu="howto">How ordering works</button>
+      <button type="button" data-menu="orders">My orders</button>
+      <button type="button" data-menu="wish">Wishlist</button>
+      <button type="button" data-menu="contact">Contact us</button>
+      <a class="btn wa block" id="menuWa" href="#" target="_blank" rel="noopener">Chat with us on WhatsApp</a>
+    </div>
+  </div>
+</aside>
 
 <aside class="drawer" id="wishDrawer" hidden aria-label="Wishlist">
   <div class="dhead"><h2>Wishlist</h2><button class="x" data-close aria-label="Close">×</button></div>
@@ -197,7 +237,7 @@
 </aside>
 <div class="toast" id="toast" hidden></div>
 
-<script src="assets/common.js?v=v4357f1aq"></script>
-<script src="assets/store.js?v=v4357f1aq"></script>
+<script src="assets/common.js?v=vc394292d"></script>
+<script src="assets/store.js?v=vc394292d"></script>
 </body>
 </html>
