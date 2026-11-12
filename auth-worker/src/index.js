@@ -9,7 +9,7 @@
    this service swaps GitHub's one-time code for an 8-hour user token and returns it in the URL fragment.
 
    Settings: wrangler.toml [vars] and Cloudflare secrets (marked *):
-     ADMIN_URL, REPO_OWNER, SITE_REPO, ORDERS_REPO, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
+     ADMIN_URL, SITE_ORIGINS (other addresses the shop is served from), REPO_OWNER, SITE_REPO, ORDERS_REPO, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
      ALLOWED_EMAILS*, TOTP_SECRET*, SESSION_SECRET*, GITHUB_APP_PRIVATE_KEY*, GITHUB_CLIENT_SECRET*
    Changing SESSION_VERSION signs everyone out.                                                                     */
 import {verifyGoogleIdToken, checkTotp, makeSession, readSession, installationToken} from "./lib.js";
@@ -36,8 +36,9 @@ export default {
 };
 
 function cors(request, env) {
-  const origin = request.headers.get("Origin"), allowed = new URL(env.ADMIN_URL).origin;
-  return origin === allowed ? {"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", Vary: "Origin"} : {};
+  const origin = request.headers.get("Origin");
+  const allowed = [new URL(env.ADMIN_URL).origin, ...String(env.SITE_ORIGINS || "").split(",").map(x => x.trim()).filter(Boolean)];
+  return allowed.includes(origin) ? {"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", Vary: "Origin"} : {};
 }
 function reply(request, env, body, status = 200) {
   return new Response(JSON.stringify(body), {status, headers: {"content-type": "application/json", "cache-control": "no-store", ...cors(request, env)}});
