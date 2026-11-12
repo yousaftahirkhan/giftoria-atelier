@@ -244,7 +244,7 @@ function statusText(o, status) {
   const T = {
     paid: [`${hi} we have received your payment${o.adv ? " of " + rs(o.adv) : ""}. Thank you!`, "", `*Your order is confirmed.* ${id}`, bal, "", "We have started making your order by hand and will update you when it is out for delivery."],
     making: [`${hi} your order is now being made by hand.`, "", id, "We will message you as soon as it is out for delivery."],
-    sent: [`${hi} your order is *out for delivery* today.`, "", id, o.rest ? `Please keep *${rs(o.rest)}* ready for the rider.` : "Your order is fully paid.", "Please keep your phone nearby so the rider can reach you."],
+    sent: [`${hi} your order is *out for delivery* today by inDrive.`, "", id, o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you."],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
     cancel: [`${hi} your order ${o.no} has been cancelled.`, "", "If you have any questions or this is a mistake, please reply to this message."]
   }[status];
@@ -320,7 +320,7 @@ function parseOrder(raw) {
   const g = re => { const m = t.match(re); return m ? m[1].trim() : "" };
   const items = []; t.split("\n").forEach(l => { const m = l.match(/^\s*[•\-]\s*(.+?)\s+[x×]\s*(\d+)\s*(?:=|—|–|-)\s*Rs\.?\s*([\d,]+)/i); if (m) { const q = +m[2]; items.push({name: m[1].trim(), qty: q, price: Math.round(num(m[3]) / q)}) } });
   const o = {no: g(/(?:Order|Tracking ID)\s*[—–\-:#*]*\s*\*?([A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4}))/i).toUpperCase(), items,
-    del: num(g(/Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/Advance[^:\n]*:\s*Rs\.?\s*([\d,]+)/i)),
+    del: num(g(/(?:^|\n)\s*Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/Advance[^:\n]*:\s*Rs\.?\s*([\d,]+)/i)),
     name: g(/(?:Naam|Name):\s*(.+)/i), phone: g(/Phone:\s*(.+)/i), city: g(/City:\s*(.+)/i), addr: g(/Address:\s*(.+)/i), area: g(/Area:\s*(.+)/i),
     needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), card: g(/Card(?: message)?:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};
   if (!o.tot && items.length) o.tot = items.reduce((s, i) => s + i.price * i.qty, 0) + o.del;

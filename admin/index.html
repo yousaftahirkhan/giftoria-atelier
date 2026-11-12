@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=v3b9c075">
-<link rel="stylesheet" href="admin.css?v=v3b9c075">
+<link rel="stylesheet" href="../assets/base.css?v=v9eedabdd">
+<link rel="stylesheet" href="admin.css?v=v9eedabdd">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -252,13 +252,9 @@
     <div class="panel" id="tab-pay" hidden>
       <div class="banner warn" id="payWarn">Payment accounts are blank. Add JazzCash, Easypaisa or bank details so customers can pay the advance.</div>
       <div class="box">
-        <h3>Delivery and advance</h3>
-        <div class="two">
-          <label class="fld" for="d-l">Delivery charge, your city (Rs)<input id="d-l" data-b="shop.delLocal" data-n type="number" min="0" step="10"></label>
-          <label class="fld" for="d-f">Free delivery above (Rs)<input id="d-f" data-b="shop.freeAbove" data-n type="number" min="0" step="100"></label>
-        </div>
+        <h3>Advance payment</h3>
         <label class="fld" for="d-a">Advance required<select id="d-a" data-b="shop.advancePct" data-n><option value="0">0% (cash on delivery)</option><option value="30">30%</option><option value="50">50%</option><option value="70">70%</option><option value="100">100% (full payment)</option></select></label>
-        <p class="hint">Orders are delivered within Multan only.</p>
+        <p class="hint">Deliveries are booked on inDrive within Multan. Customers pay the rider's fare on delivery; it is not added to the order total.</p>
       </div>
       <div class="box">
         <h3>Payment accounts</h3>
@@ -286,8 +282,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js?v=v3b9c075"></script>
-<script src="config.js?v=v3b9c075"></script>
-<script src="admin.js?v=v3b9c075"></script>
+<script src="../assets/common.js?v=v9eedabdd"></script>
+<script src="config.js?v=v9eedabdd"></script>
+<script src="admin.js?v=v9eedabdd"></script>
 </body>
 </html>

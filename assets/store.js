@@ -126,7 +126,7 @@ function renderChrome(){
   const boxes=[];
   if(s.wa)boxes.push(`<div class="cbox"><span class="k">WhatsApp</span><span class="v">${esc(s.wa)}</span><span class="s">Orders, custom designs and questions</span><a class="btn wa" style="align-self:start;margin-top:6px" href="${esc(wa)}" target="_blank" rel="noopener">Start a chat</a></div>`);
   if(s.phone||s.email)boxes.push(`<div class="cbox"><span class="k">Call / Email</span>${s.phone?`<span class="v">${esc(s.phone)}</span>`:""}${s.email?`<span class="v">${esc(s.email)}</span>`:""}</div>`);
-  boxes.push(`<div class="cbox"><span class="k">Based in</span><span class="v">${esc(s.address||s.city||"Multan")}</span><span class="s">${esc(s.hours||"")}${s.hours?"\n":""}Delivery: ${rs(s.delLocal)} within ${esc(s.city||"Multan")} only${s.freeAbove?"\nFree delivery over "+rs(s.freeAbove):""}</span></div>`);
+  boxes.push(`<div class="cbox"><span class="k">Based in</span><span class="v">${esc(s.address||s.city||"Multan")}</span><span class="s">${esc(s.hours||"")}${s.hours?"\n":""}Delivery by inDrive within ${esc(s.city||"Multan")}. You pay the rider's fare on delivery.</span></div>`);
   if(soc.length)boxes.push(`<div class="cbox"><span class="k">Social</span><span class="s">New designs appear here first</span><div class="social">${soc.map(([k,l])=>`<a class="sm" href="${esc(safeUrl(S.social[k]))}" target="_blank" rel="noopener">${l}</a>`).join("")}</div></div>`);
   $("contactBoxes").innerHTML=boxes.join("");
 }
@@ -181,8 +181,7 @@ function totals(){
   const adds=(S.addons||[]).filter((a,i)=>addSel[i]&&a.name);
   const addT=adds.reduce((s,a)=>s+(+a.price||0),0);
   const base=sub+addT;
-  const free=S.shop.freeAbove&&base>=S.shop.freeAbove;
-  const del=sub===0||free?0:(+S.shop.delLocal||0);
+  const del=0; /* delivery is booked on inDrive; the customer pays the rider's fare, so it is not in the total */
   const tot=base+del, pct=Math.min(100,Math.max(0,+S.shop.advancePct||0));
   const adv=pct>=100?tot:Math.ceil(tot*pct/100/10)*10;
   return{sub,adds,addT,del,tot,pct,adv,rest:tot-adv};
@@ -199,7 +198,7 @@ function renderCart(){
   $("addonBox").innerHTML=ad?`<div class="fld" style="font-size:13px">Add a little extra</div>${ad}`:"";$("addonBox").hidden=!ad||!ids.length;
   const t=totals();
   $("tSub").textContent=rs(t.sub);$("tAddRow").hidden=!t.adds.length;$("tAdd").textContent=rs(t.addT);
-  $("tDel").textContent=t.sub===0?"Rs 0":(t.del?rs(t.del):"Free");$("tTot").textContent=rs(t.tot);
+  $("tDel").textContent="Paid to rider";$("tTot").textContent=rs(t.tot);
   $("tAdvRow").hidden=!t.pct;$("tAdvLbl").textContent=t.pct>=100?"Due now (full payment)":`Advance due now (${t.pct}%)`;$("tAdv").textContent=rs(t.adv);
 }
 $("lines").addEventListener("click",e=>{const b=e.target.closest("button[data-d]");if(!b)return;const id=b.dataset.id;
@@ -222,9 +221,10 @@ function orderText(o){
   const day=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
   const L=[`*${S.shop.name} | New Order*`,`Tracking ID: *${o.no}*`,`Date: ${day}`,"","*Items*"];
   o.items.forEach(i=>L.push(`• ${i.name} × ${i.qty} — ${rs(i.price*i.qty)}`));
-  L.push("",`Subtotal: ${rs(o.sub+o.addT)}`,`Delivery: ${o.del?rs(o.del):"Free"}`,`*Total: ${rs(o.tot)}*`);
+  L.push("",`*Total: ${rs(o.tot)}*`);
   if(o.pct){L.push(`Advance due (${o.pct}%): ${rs(o.adv)}`);if(o.rest>0)L.push(`Balance on delivery: ${rs(o.rest)}`)}
   L.push("","*Delivery details*",`Name: ${o.name}`,`Phone: ${o.phone}`,`City: ${o.city}`,...(o.area?[`Area: ${o.area}`]:[]),`Address: ${o.addr}`);
+  L.push(`Delivery: by inDrive, fare paid to the rider`);
   if(o.need)L.push(`Needed by: ${fmtDate(o.need)}`);
   if(o.card)L.push(`Card message: ${o.card}`);
   if(o.note)L.push(`Note: ${o.note}`);
@@ -247,7 +247,7 @@ function showPay(){
   $("cartTitle").textContent="Order "+o.no;
   $("receipt").innerHTML=`<div class="sub">Order number</div><div class="ono">${esc(o.no)}</div><hr>
     ${o.items.map(i=>`<div class="r"><span>${esc(i.name)} × ${i.qty}</span><span>${rs(i.price*i.qty)}</span></div>`).join("")}
-    <div class="r"><span>Delivery</span><span>${o.del?rs(o.del):"Free"}</span></div><hr>
+    <div class="r"><span>Delivery (inDrive)</span><span>Paid to rider</span></div><hr>
     <div class="r" style="font-weight:800"><span>Total</span><span>${rs(o.tot)}</span></div>
     <div class="r sub"><span>${esc(o.name)} · ${esc(o.phone)}</span><span>${esc(o.city)}</span></div>
     ${o.need?`<div class="r sub"><span>Needed by</span><span>${esc(fmtDate(o.need))}</span></div>`:""}
