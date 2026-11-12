@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=v62aee8cp">
-<link rel="stylesheet" href="assets/store.css?v=v62aee8cp">
+<link rel="stylesheet" href="assets/base.css?v=v766566af">
+<link rel="stylesheet" href="assets/store.css?v=v766566af">
 </head>
 <body>
 
@@ -163,6 +163,11 @@
       <label for="fPhone">Phone / WhatsApp<input id="fPhone" inputmode="tel" autocomplete="tel" placeholder="0312 3456789"></label>
       <label for="fArea">Area<select id="fArea"><option value="">Select your area</option></select></label>
       <label for="fAddr">Delivery address<textarea id="fAddr" rows="3" placeholder="House number, street, area, Multan"></textarea></label>
+      <fieldset class="paychoice" id="payChoice" hidden>
+        <legend>Payment</legend>
+        <label class="addon" for="payAdv"><input type="radio" name="payopt" id="payAdv" value="adv" checked><span id="payAdvTxt">Pay advance now</span><b class="sub" id="payAdvAmt"></b></label>
+        <label class="addon" for="payFull"><input type="radio" name="payopt" id="payFull" value="full"><span>Pay full amount now</span><b class="sub" id="payFullAmt"></b></label>
+      </fieldset>
     </form>
   </div>
   <div class="totals" id="cartTotals">
@@ -192,7 +197,7 @@
 </aside>
 <div class="toast" id="toast" hidden></div>
 
-<script src="assets/common.js?v=v62aee8cp"></script>
-<script src="assets/store.js?v=v62aee8cp"></script>
+<script src="assets/common.js?v=v766566af"></script>
+<script src="assets/store.js?v=v766566af"></script>
 </body>
 </html>
