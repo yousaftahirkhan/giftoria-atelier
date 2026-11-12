@@ -182,3 +182,5 @@ footer button.fl:hover{opacity:1;text-decoration:underline}
   .card{transition:transform .15s}
   .card:hover{transform:translateY(-3px)}
 }
+.ostatus{font-size:14px;border-radius:10px;padding:6px 10px;background:var(--blush)}
+.ostatus[data-s="paid"],.ostatus[data-s="making"],.ostatus[data-s="sent"],.ostatus[data-s="done"]{background:#E3F2EC;color:#1D6F4A}

@@ -1,6 +1,8 @@
 /* Storefront: customers browse, add to cart and place the order on WhatsApp. Nothing here edits the shop;
    all content comes from data/shop.json, which the super admin (admin/) publishes. */
 "use strict";
+/* The shop's sign-in service also receives orders (saved privately for the super admin) and answers order tracking. */
+const ORDER_API = "https://giftoria-auth.giftoria-atelier.workers.dev";
 let S = normalizeShop({});
 const findP = id => S.products.find(p => p.id === id);
 $("logoArt").innerHTML = LOGO; $("logoArt2").innerHTML = LOGO;
@@ -268,7 +270,7 @@ const waLink=o=>"https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent(typ
 $("confirmBtn").addEventListener("click",e=>{
   const err=check();if(err){e.preventDefault();setMsg("msg",err,true);return}setMsg("msg","");
   save("gd-cust",{fName:$("fName").value,fPhone:$("fPhone").value,fArea:$("fArea").value,fAddr:$("fAddr").value});
-  ORDER=buildOrder();$("confirmBtn").href=waLink(ORDER);rememberOrder(ORDER);showPay();
+  ORDER=buildOrder();$("confirmBtn").href=waLink(ORDER);rememberOrder(ORDER);sendOrder(ORDER);showPay();
 });
 $("waBtn").addEventListener("click",()=>setMsg("msg2","Opening WhatsApp. If it does not open, copy the message and send it to "+S.shop.wa+"."));
 $("copyBtn").onclick=()=>navigator.clipboard.writeText(orderText(ORDER)).then(()=>setMsg("msg2","Message copied. Paste it in a WhatsApp chat with "+S.shop.wa+"."))
@@ -278,10 +280,22 @@ function backToCart(){$("cartTitle").textContent="Your cart";$("cartStep").hidde
 $("backBtn").onclick=backToCart;
 $("newOrderBtn").onclick=()=>{cart={};addSel={};persist();ORDER=null;["fNote","fDate","fCard"].forEach(k=>$(k).value="");refreshProducts();backToCart();toast("Cart cleared")};
 
+/* Saves the order for the shop. WhatsApp still opens either way, so a network problem never blocks the customer. */
+function sendOrder(o){
+  try{fetch(ORDER_API+"/order",{method:"POST",keepalive:true,headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({order:{...o,needTxt:fmtDate(o.need)}})}).catch(()=>{})}catch(e){}
+}
+
 /* ---------- my orders: orders placed from this device ---------- */
 function rememberOrder(o){
-  myOrders=[{no:o.no,at:Date.now(),items:o.items,tot:o.tot,adv:o.adv,pct:o.pct,cart:{...cart},text:orderText(o)},...myOrders.filter(x=>x.no!==o.no)].slice(0,20);
+  myOrders=[{no:o.no,phone:o.phone,at:Date.now(),items:o.items,tot:o.tot,adv:o.adv,pct:o.pct,cart:{...cart},text:orderText(o)},...myOrders.filter(x=>x.no!==o.no)].slice(0,20);
   save("gd-orders",myOrders);renderMyOrders();
+}
+let TRACK={};
+async function trackOrders(){
+  const q=myOrders.filter(o=>o.phone).map(o=>({no:o.no,phone:o.phone}));if(!q.length)return;
+  try{const r=await fetch(ORDER_API+"/track",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orders:q})});
+    if(r.ok){TRACK=(await r.json()).orders||{};myOrders.forEach(o=>{if(!TRACK[o.no])TRACK[o.no]={status:"",label:"Not received yet. Please send the order on WhatsApp."}});renderMyOrders()}}catch(e){}
 }
 function renderMyOrders(){
   $("orderCount").textContent=myOrders.length;$("orderCount").hidden=!myOrders.length;
@@ -289,6 +303,7 @@ function renderMyOrders(){
       <div class="ohead"><span class="no">${esc(o.no)}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK",{day:"numeric",month:"short",year:"numeric"})}</span></div>
       <ul>${(o.items||[]).map(it=>`<li>${esc(it.name)} × ${it.qty}</li>`).join("")}</ul>
       <div class="sub">Total <b>${rs(o.tot)}</b>${o.pct?` · Advance ${rs(o.adv)}`:""}</div>
+      <div class="ostatus" data-s="${esc((TRACK[o.no]||{}).status||"")}">${TRACK[o.no]?"Status: <b>"+esc(TRACK[o.no].label)+"</b>":"Status: checking…"}</div>
       <div class="acts"><a class="sm green" href="${esc(waLink(o.text||""))}" target="_blank" rel="noopener">Send on WhatsApp again</a><button class="sm" type="button" data-reorder="${i}">Order again</button></div>
     </div>`).join("")+`<button class="sm red" type="button" id="clearOrders" style="align-self:start">Clear this list</button>`
     :`<div class="empty">No orders yet. Orders you place on this device appear here.</div>`;
@@ -307,7 +322,7 @@ let openPanel=null;
 function show(panel){if(openPanel)openPanel.hidden=true;openPanel=panel;$("scrim").hidden=!panel;if(panel){panel.hidden=false;const c=panel.querySelector("[data-close]");if(c)c.focus()}}
 $("openCart").onclick=()=>show($("drawer"));
 $("openWish").onclick=()=>show($("wishDrawer"));
-$("openOrders").onclick=()=>show($("ordersDrawer"));
+$("openOrders").onclick=()=>{show($("ordersDrawer"));trackOrders()};
 $("openSearch").onclick=()=>{show(null);$("shop").scrollIntoView({behavior:"smooth"});setTimeout(()=>$("q").focus(),400)};
 $("scrim").onclick=()=>show(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>show(null));

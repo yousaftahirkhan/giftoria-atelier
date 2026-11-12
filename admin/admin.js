@@ -199,6 +199,8 @@ $("oFilter").addEventListener("click", e => { const b = e.target.closest("[data-
 $("oSearch").addEventListener("input", () => renderOrders());
 $("oRefresh").onclick = () => loadOrders(true);
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN && !$("tab-orders").hidden) loadOrders() });
+/* Website orders arrive on their own; check for new ones every minute while the Orders tab is open. */
+setInterval(() => { if (!document.hidden && TOKEN && !$("tab-orders").hidden && !ordersBusy) loadOrders() }, 60e3);
 
 async function fetchOrders() {
   try {
@@ -247,7 +249,7 @@ function renderOrders() {
   const list = ORDERS.filter(o => oFilter === "all" || (oFilter === "open" ? !["done", "cancel"].includes(o.status) : o.status === oFilter))
     .filter(o => !q || [o.no, o.name, o.phone, o.city].join(" ").toLowerCase().includes(q));
   $("oList").innerHTML = list.length ? list.map(o => `<div class="ocard" data-s="${esc(o.status)}">
-    <div class="ohead"><span class="no">${esc(o.no)}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK", {day: "numeric", month: "short"})}${o.needTxt ? " · needed by " + esc(o.needTxt) : ""}</span></div>
+    <div class="ohead"><span class="no">${esc(o.no)}${o.source === "website" ? ` <span class="src">Website</span>` : ""}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK", {day: "numeric", month: "short"})}${o.needTxt ? " · needed by " + esc(o.needTxt) : ""}</span></div>
     <div><b>${esc(o.name || "—")}</b> <span class="sub">· ${esc(o.phone)} · ${esc(o.city)}</span></div>
     ${o.addr ? `<div class="sub">${o.area ? esc(o.area) + " · " : ""}${esc(o.addr)}</div>` : ""}
     ${o.items && o.items.length ? `<ul class="oitems">${o.items.map(i => `<li>${esc(i.name)} × ${i.qty}</li>`).join("")}</ul>` : ""}

@@ -86,3 +86,4 @@ body{background:var(--bg)}
 }
 .gbtn{display:flex;justify-content:center;min-height:44px}
 .otp{font-size:24px;letter-spacing:.35em;text-align:center;font-variant-numeric:tabular-nums;font-weight:700}
+.src{font-family:var(--body);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--blush);color:var(--rose);border-radius:999px;padding:2px 8px;vertical-align:middle}
