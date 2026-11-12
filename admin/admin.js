@@ -236,6 +236,23 @@ async function mutateOrders(fn, message) {
   finally { ordersBusy = false }
   return false;
 }
+/* WhatsApp message telling the customer about their order's current status. */
+function statusText(o, status) {
+  const shop = S.shop.name || "our shop", hi = `Hello ${o.name || ""},`, id = `Tracking ID: *${o.no}*`;
+  const site = location.origin + location.pathname.replace(/admin\/[^/]*$/, ""), track = `Track your order: ${site}#track=${encodeURIComponent(o.no)}`;
+  const bal = o.rest ? `Balance to pay on delivery: *${rs(o.rest)}*` : "Your order is fully paid.";
+  const T = {
+    paid: [`${hi} we have received your payment${o.adv ? " of " + rs(o.adv) : ""}. Thank you!`, "", `*Your order is confirmed.* ${id}`, bal, "", "We have started making your order by hand and will update you when it is out for delivery."],
+    making: [`${hi} your order is now being made by hand.`, "", id, "We will message you as soon as it is out for delivery."],
+    sent: [`${hi} your order is *out for delivery* today.`, "", id, o.rest ? `Please keep *${rs(o.rest)}* ready for the rider.` : "Your order is fully paid.", "Please keep your phone nearby so the rider can reach you."],
+    done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
+    cancel: [`${hi} your order ${o.no} has been cancelled.`, "", "If you have any questions or this is a mistake, please reply to this message."]
+  }[status];
+  if (!T) return "";
+  return [...T, ...(status === "cancel" || status === "done" ? [] : ["", track]), "", `— ${shop}`].join("\n");
+}
+const statusLink = (o, st) => `https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(statusText(o, st))}`;
+
 /* WhatsApp message to the customer with the advance due and the shop's payment accounts. */
 function paymentText(o) {
   const acc = payAccounts(S), shop = S.shop.name || "our shop";
@@ -271,20 +288,24 @@ function renderOrders() {
       <select data-st="${esc(o.no)}" aria-label="Status">${STATUS.map(([k, l]) => `<option value="${k}"${k === o.status ? " selected" : ""}>${l}</option>`).join("")}</select>
       ${o.phone ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
       ${o.phone && o.status === "new" && o.adv ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(paymentText(o))}" target="_blank" rel="noopener">Send payment details</a>` : ""}
+      ${o.phone && o.status !== "new" ? `<a class="sm green" href="${statusLink(o, o.status)}" target="_blank" rel="noopener">Send update: ${esc(STATUS_LBL[o.status])}</a>` : ""}
       <button class="sm red" data-odel="${esc(o.no)}">Delete</button>
     </div></div>`).join("")
     : `<div class="empty-box">${ORDERS.length ? "No orders match this filter." : "No orders saved yet. When an order arrives on WhatsApp, paste the message above and save it."}</div>`;
 }
 $("oList").addEventListener("change", async e => {
   const s = e.target.closest("[data-st]"); if (!s) return; const no = s.dataset.st, st = s.value;
-  if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: st} : o), `Order ${no}: ${STATUS_LBL[st]}`)) toast("Status: " + STATUS_LBL[st]);
+  if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: st} : o), `Order ${no}: ${STATUS_LBL[st]}`)) toast(st === "new" ? "Status: " + STATUS_LBL[st] : `Status: ${STATUS_LBL[st]}. Tap "Send update" to tell the customer.`);
   else renderOrders();
 });
 $("oList").addEventListener("click", async e => {
   const ap = e.target.closest("[data-approve]"), del = e.target.closest("[data-odel]");
-  if (ap) { ap.disabled = true; const no = ap.dataset.approve;
-    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "paid", approvedAt: Date.now()} : o), `Order ${no}: payment approved`)) toast("Payment approved for " + no);
-    else ap.disabled = false; return }
+  if (ap) { ap.disabled = true; const no = ap.dataset.approve, ord = ORDERS.find(o => o.no === no);
+    const win = ord && ord.phone ? window.open("", "_blank") : null;
+    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "paid", approvedAt: Date.now()} : o), `Order ${no}: payment approved`)) {
+      if (win) { win.location.href = statusLink(ord, "paid"); toast("Payment approved. Send the confirmation in WhatsApp.") } else toast("Payment approved for " + no);
+    } else { ap.disabled = false; if (win) win.close() }
+    return }
   if (del) { if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "Confirm delete"; return }
     const no = del.dataset.odel; if (await mutateOrders(list => list.filter(o => o.no !== no), `Delete order ${no}`)) toast("Order deleted") }
 });
