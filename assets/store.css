@@ -276,3 +276,10 @@ header.top{background:rgba(243,246,250,.92);-webkit-backdrop-filter:saturate(1.4
   .steps li span:not(.n){flex-basis:100%}
 }
 @media (min-width:901px){.rail{display:none}.bar{padding-block:14px}}
+/* View cart button: compact navy pill with a count badge */
+.cart-float{gap:8px;padding:8px 14px 8px 10px;font-size:13.5px;font-weight:800;background:var(--ink);color:#fff;border:1px solid rgba(255,255,255,.1);box-shadow:0 8px 22px rgba(26,36,51,.28);bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+.cart-float:hover{background:#243247}
+.cart-float svg{width:16px;height:16px;flex:none}
+.cart-float #cartFloatTxt{display:flex;align-items:center;gap:8px;overflow:visible}
+.cart-float .cf-n{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:var(--rose);color:#fff;font-size:11.5px;line-height:1;font-variant-numeric:tabular-nums}
+.cart-float .cf-t{color:rgba(255,255,255,.72);font-weight:700;font-variant-numeric:tabular-nums;padding-left:8px;border-left:1px solid rgba(255,255,255,.2)}
