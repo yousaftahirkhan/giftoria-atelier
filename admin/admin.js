@@ -190,7 +190,7 @@ document.querySelectorAll(".tab").forEach(b => b.onclick = () => selectTab(b.dat
    ===================================================================== */
 const STATUS = [["new","Awaiting payment"],["paid","Payment approved"],["making","In progress"],["sent","Out for delivery"],["done","Delivered"],["cancel","Cancelled"]];
 const STATUS_LBL = Object.fromEntries(STATUS);
-const FILTERS = [["open","Active"],["new","Awaiting payment"],["paid","Payment approved"],["making","In progress"],["sent","Out for delivery"],["done","Delivered"],["all","All"]];
+const FILTERS = [["open","Active"],["new","Awaiting payment"],["paid","Payment approved"],["sent","Out for delivery"],["done","Delivered"],["cancel","Cancelled"],["all","All"]];
 let ORDERS = [], ordersSha = null, oFilter = "open", parsed = null, ordersBusy = false;
 
 $("oFilter").innerHTML = FILTERS.map(([k, l]) => `<button class="chip" data-f="${k}" aria-pressed="${k === oFilter}">${l}</button>`).join("");
@@ -243,9 +243,11 @@ function statusText(o, status) {
   const T = {
     paid: [`${hi} we have received your payment${o.adv ? " of " + rs(o.adv) : ""}. Thank you!`, "", `*Your order is confirmed.* ${id}`, bal, "", "We have started making your order by hand and will update you when it is out for delivery."],
     making: [`${hi} your order is now being made by hand.`, "", id, "We will message you as soon as it is out for delivery."],
-    sent: [`${hi} your order is *out for delivery* today by inDrive.`, "", id, o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you."],
+    sent: [`${hi} your order is *out for delivery* by inDrive.`, "", id,
+      ...(o.rider ? ["", "*Rider details*", `Name: ${o.rider.name}`, `Phone: ${o.rider.phone}`, ...(o.rider.vehicle ? [`Vehicle: ${o.rider.vehicle}`] : []), ""] : []),
+      o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you."],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
-    cancel: [`${hi} your order ${o.no} has been cancelled.`, "", "If you have any questions or this is a mistake, please reply to this message."]
+    cancel: [`${hi} we are sorry, your order has been *cancelled*.`, "", id, ...(o.cancelReason ? [`Reason: ${o.cancelReason}`] : []), "", "If you have any questions, please reply to this message."]
   }[status];
   if (!T) return "";
   return [...T, "", `— ${shop}`].join("\n");
@@ -284,31 +286,68 @@ function renderOrders() {
     ${o.items && o.items.length ? `<ul class="oitems">${o.items.map(i => `<li>${esc(i.name)} × ${i.qty}</li>`).join("")}</ul>` : ""}
     ${o.card ? `<div class="sub">Card: ${esc(o.card)}</div>` : ""}${o.note ? `<div class="sub">Note: ${esc(o.note)}</div>` : ""}
     <div class="omoney"><span>Total <b>${rs(o.tot)}</b></span>${o.adv ? `<span>Advance <b>${rs(o.adv)}</b></span><span>Balance <b>${rs(o.rest)}</b></span>` : ""}</div>
+    ${o.rider ? `<div class="rider-info">inDrive rider: <b>${esc(o.rider.name)}</b> · <a href="tel:${esc(o.rider.phone)}">${esc(o.rider.phone)}</a>${o.rider.vehicle ? " · " + esc(o.rider.vehicle) : ""}</div>` : ""}
+    ${["paid", "making", "sent"].includes(o.status) && o.phone ? `<details class="rider-box"${o.rider ? "" : " open"}><summary>${o.rider ? "Change rider" : "Assign inDrive rider"}</summary>
+      <div class="three" data-rform="${esc(o.no)}">
+        <label class="fld">Rider name<input data-rf="name" maxlength="40" value="${esc(o.rider ? o.rider.name : "")}" placeholder="Ali Raza"></label>
+        <label class="fld">Rider phone<input data-rf="phone" inputmode="tel" maxlength="20" value="${esc(o.rider ? o.rider.phone : "")}" placeholder="0300 1234567"></label>
+        <label class="fld">Vehicle<input data-rf="vehicle" maxlength="40" value="${esc(o.rider ? o.rider.vehicle : "")}" placeholder="Suzuki Alto · LEB-1234"></label>
+      </div>
+      <button class="btn em" type="button" data-rsave="${esc(o.no)}" style="padding:8px 16px;margin-top:8px">Save and send rider details on WhatsApp</button>
+    </details>` : ""}
     ${o.status === "new" ? `<div class="banner warn" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>Approve only after you have checked the payment screenshot on WhatsApp.</span><button class="btn em" data-approve="${esc(o.no)}" style="padding:8px 16px">✓ Approve payment</button></div>` : ""}
+    ${o.status === "cancel" ? `<div class="cancel-info">Cancelled${o.cancelReason ? ": " + esc(o.cancelReason) : ""}</div>` : ""}
     <div class="ofoot">
-      <select data-st="${esc(o.no)}" aria-label="Status">${STATUS.map(([k, l]) => `<option value="${k}"${k === o.status ? " selected" : ""}>${l}</option>`).join("")}</select>
+      <span class="ostate">${esc(STATUS_LBL[o.status] || o.status)}</span>
       ${o.phone ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
       ${o.phone && o.status === "new" && o.adv ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(paymentText(o))}" target="_blank" rel="noopener">Send payment details</a>` : ""}
-      ${o.phone && o.status !== "new" ? `<a class="sm green" href="${statusLink(o, o.status)}" target="_blank" rel="noopener">Send update: ${esc(STATUS_LBL[o.status])}</a>` : ""}
-      <button class="sm red" data-odel="${esc(o.no)}">Delete</button>
+      ${o.status === "sent" ? `<button class="sm" type="button" data-delivered="${esc(o.no)}">✓ Mark delivered</button>` : ""}
+      ${["new", "paid", "making", "sent"].includes(o.status) ? `<button class="sm red" type="button" data-cancelopen="${esc(o.no)}">Cancel order</button>` : ""}
+    </div>
+    <div class="cancel-box" data-cbox="${esc(o.no)}" hidden>
+      <label class="fld">Reason for cancelling (sent to the customer)<input data-creason maxlength="160" placeholder="e.g. Payment not received within 24 hours"></label>
+      <div class="ofoot"><button class="btn" type="button" data-cancelgo="${esc(o.no)}" style="background:var(--rose);color:#fff;padding:8px 16px">Cancel order and tell the customer</button><button class="sm" type="button" data-cancelback="${esc(o.no)}">Keep order</button></div>
     </div></div>`).join("")
     : `<div class="empty-box">${q ? "No order found for this tracking ID, name or phone number. If the customer ordered on WhatsApp only, add it with the box at the bottom." : ORDERS.length ? "No orders with this status." : "No orders yet. Orders placed on the website appear here automatically."}</div>`;
 }
-$("oList").addEventListener("change", async e => {
-  const s = e.target.closest("[data-st]"); if (!s) return; const no = s.dataset.st, st = s.value;
-  if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: st} : o), `Order ${no}: ${STATUS_LBL[st]}`)) toast(st === "new" ? "Status: " + STATUS_LBL[st] : `Status: ${STATUS_LBL[st]}. Tap "Send update" to tell the customer.`);
-  else renderOrders();
-});
 $("oList").addEventListener("click", async e => {
-  const ap = e.target.closest("[data-approve]"), del = e.target.closest("[data-odel]");
+  const rs_ = e.target.closest("[data-rsave]");
+  if (rs_) {
+    const no = rs_.dataset.rsave, box = $("oList").querySelector(`[data-rform="${CSS.escape(no)}"]`);
+    const val = k => box.querySelector(`[data-rf="${k}"]`).value.trim();
+    const rider = {name: val("name"), phone: val("phone"), vehicle: val("vehicle")};
+    if (!rider.name || rider.phone.replace(/\D/g, "").length < 10) { toast("Enter the rider's name and a valid phone number."); return }
+    const win = window.open("", "_blank"); rs_.disabled = true;
+    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, rider, status: "sent", sentAt: Date.now()} : o), `Order ${no}: rider ${rider.name}, out for delivery`)) {
+      const ord = ORDERS.find(o => o.no === no);
+      if (win) win.location.href = statusLink(ord, "sent");
+      toast("Rider saved. Send the details to the customer in WhatsApp.");
+    } else { rs_.disabled = false; if (win) win.close() }
+    return;
+  }
+  const ap = e.target.closest("[data-approve]");
   if (ap) { ap.disabled = true; const no = ap.dataset.approve, ord = ORDERS.find(o => o.no === no);
     const win = ord && ord.phone ? window.open("", "_blank") : null;
     if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "paid", approvedAt: Date.now()} : o), `Order ${no}: payment approved`)) {
       if (win) { win.location.href = statusLink(ord, "paid"); toast("Payment approved. Send the confirmation in WhatsApp.") } else toast("Payment approved for " + no);
     } else { ap.disabled = false; if (win) win.close() }
     return }
-  if (del) { if (del.dataset.sure !== "1") { del.dataset.sure = "1"; del.textContent = "Confirm delete"; return }
-    const no = del.dataset.odel; if (await mutateOrders(list => list.filter(o => o.no !== no), `Delete order ${no}`)) toast("Order deleted") }
+  const co = e.target.closest("[data-cancelopen]"), cb = e.target.closest("[data-cancelback]"), cg = e.target.closest("[data-cancelgo]"), dl = e.target.closest("[data-delivered]");
+  const cbox = no => $("oList").querySelector(`[data-cbox="${CSS.escape(no)}"]`);
+  if (co) { const b = cbox(co.dataset.cancelopen); b.hidden = false; b.querySelector("[data-creason]").focus(); return }
+  if (cb) { cbox(cb.dataset.cancelback).hidden = true; return }
+  if (cg) {
+    const no = cg.dataset.cancelgo, reason = cbox(no).querySelector("[data-creason]").value.trim(), ord = ORDERS.find(o => o.no === no);
+    if (!reason) { toast("Please write the reason for cancelling."); return }
+    const win = ord && ord.phone ? window.open("", "_blank") : null; cg.disabled = true;
+    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "cancel", cancelReason: reason, cancelledAt: Date.now()} : o), `Order ${no}: cancelled (${reason})`)) {
+      if (win) win.location.href = statusLink(ORDERS.find(o => o.no === no), "cancel");
+      toast("Order cancelled. Send the message to the customer in WhatsApp.");
+    } else { cg.disabled = false; if (win) win.close() }
+    return;
+  }
+  if (dl) { const no = dl.dataset.delivered; dl.disabled = true;
+    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "done", deliveredAt: Date.now()} : o), `Order ${no}: delivered`)) toast("Marked as delivered"); else dl.disabled = false; return }
 });
 
 /* Reads a WhatsApp order message (the format the storefront sends) back into fields. */
