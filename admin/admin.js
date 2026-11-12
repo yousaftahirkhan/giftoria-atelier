@@ -436,7 +436,8 @@ function warns() {
   $("exampleNote").hidden = !S.products.some(p => p.sample || (!p.photo && p.art));
   $("shopName").textContent = S.shop.name || "Shop";
 }
-function fillBinds() { M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); warns() }
+$("areasBox").addEventListener("input", () => { S.shop.areas = [...new Set($("areasBox").value.split("\n").map(a => a.trim()).filter(Boolean))]; changed() });
+function fillBinds() { $("areasBox").value = shopAreas(S).join("\n"); M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); warns() }
 function fillThumbs() { M.querySelectorAll("[data-thumb]").forEach(el => { const v = getPath(S, el.dataset.thumb); el.innerHTML = v ? `<img src="${esc(photoSrc(v))}" alt="">` : "—" }) }
 function changed() { warns(); markDirty() }
 M.addEventListener("input", e => {

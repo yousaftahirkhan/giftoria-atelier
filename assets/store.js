@@ -109,6 +109,8 @@ function renderChrome(){
   $("shopName").textContent=s.name||"Shop";$("footName").textContent=s.name||"";
   $("footAbout").textContent=s.footAbout||"";
   $("trustDelT").textContent="Delivery across "+(s.city||"Multan");
+  {const cur=$("fArea").value||load("gd-cust",{}).fArea||"";
+   $("fArea").innerHTML=`<option value="">Select your area</option>`+shopAreas(S).map(a=>`<option${a===cur?" selected":""}>${esc(a)}</option>`).join("")+`<option value="Other"${cur==="Other"?" selected":""}>Other area (write it in the address)</option>`}
   $("trustPayT").textContent=pct?(pct>=100?"Full payment upfront":pct+"% advance"):"Cash on delivery";
   $("trustPay").textContent=pct?(payAccounts(S).map(a=>a.k).join(", ")||"JazzCash, Easypaisa, bank"):"Pay on delivery";
   const wa="https://wa.me/"+intl(s.wa)+"?text="+encodeURIComponent("Hello! I have a question about "+(s.name||"your shop")+".");
@@ -213,7 +215,7 @@ function buildOrder(){
   const items=Object.entries(cart).map(([id,q])=>{const p=findP(id);return{name:p.name,qty:q,price:p.price}});
   t.adds.forEach(a=>items.push({name:"Add-on: "+a.name,qty:1,price:+a.price||0}));
   return {no:makeOrderNo(S.shop.name),items,...t,name:$("fName").value.trim(),phone:$("fPhone").value.trim(),city:S.shop.city||"Multan",
-    area:"",addr:$("fAddr").value.trim(),need:"",note:"",card:""};
+    area:$("fArea").value==="Other"?"":$("fArea").value,addr:$("fAddr").value.trim(),need:"",note:"",card:""};
 }
 /* The shop's super admin reads this exact message format back in (Orders → Add an order from WhatsApp). */
 const trackUrl=no=>location.origin+location.pathname.replace(/[^/]*$/,"")+"#track="+encodeURIComponent(no);
@@ -239,6 +241,7 @@ function check(){
   if(!Object.keys(cart).length)return "Please add an item to your cart.";
   if(!$("fName").value.trim())return "Please enter your name.";
   if($("fPhone").value.replace(/\D/g,"").length<10)return "Please enter a valid phone number, e.g. 0312 3456789.";
+  if(!$("fArea").value)return "Please select your area.";
   if(!$("fAddr").value.trim())return "Please enter your delivery address.";
   return "";
 }
@@ -273,7 +276,7 @@ const waLink=o=>"https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent(typ
    shop's WhatsApp chat before the browser follows it, so one tap places the order and opens the chat. */
 $("confirmBtn").addEventListener("click",e=>{
   const err=check();if(err){e.preventDefault();setMsg("msg",err,true);return}setMsg("msg","");
-  save("gd-cust",{fName:$("fName").value,fPhone:$("fPhone").value,fAddr:$("fAddr").value});
+  save("gd-cust",{fName:$("fName").value,fPhone:$("fPhone").value,fArea:$("fArea").value,fAddr:$("fAddr").value});
   ORDER=buildOrder();$("confirmBtn").href=waLink(ORDER);rememberOrder(ORDER);sendOrder(ORDER);showPay();
 });
 $("waBtn").addEventListener("click",()=>setMsg("msg2","Opening WhatsApp. If it does not open, copy the message and send it to "+S.shop.wa+"."));

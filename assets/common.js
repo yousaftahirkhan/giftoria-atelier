@@ -78,6 +78,10 @@ const fmtDate=s=>{if(!s)return "";const d=new Date(s+"T00:00:00");return isNaN(d
 const safeUrl=u=>/^https?:\/\//i.test(u||"")?u:"";
 let toastTimer;function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.hidden=true,2600)}
 
+/* Delivery areas offered at checkout. The owner can change the list in the admin (Business info). */
+const DEFAULT_AREAS=["Abdali Road", "Bahadurpur", "Bohar Gate", "Bosan Road", "Buch Executive Villas", "BZU / Zakariya Town", "Cantt", "Chowk Kumharan", "Chowk Shaheedan", "Chungi No. 9", "Citi Housing", "Daulat Gate", "Delhi Gate", "Dera Adda", "DHA Multan", "Double Phatak", "Fatima Jinnah Town", "Garden Town", "Ghanta Ghar", "Gulgasht Colony", "Haram Gate", "Hassan Parwana Colony", "Hussain Agahi", "Katchery Road", "Khanewal Road", "Kotla Tolay Khan", "LMQ Road", "Lohari Gate", "Masoom Shah Road", "Mattital Road", "MDA Chowk", "Model Town", "Mumtazabad", "Naqshband Colony", "Nawan Shehar", "New Multan", "Nishtar Road", "Northern Bypass", "Officers Colony", "Old Shujabad Road", "Pak Gate", "Peer Khurshid Colony", "Qadirpur Raan", "Qasim Bela", "Rashidabad", "Royal Orchard", "Sameejabad", "Shah Rukn-e-Alam Colony", "Shah Shams Colony", "Shalimar Colony", "Sher Shah Road", "Shujabad Road", "Suraj Miani", "Vehari Road", "Wapda Town"];
+const shopAreas=S=>Array.isArray(S.shop.areas)&&S.shop.areas.length?S.shop.areas:DEFAULT_AREAS;
+
 /* Payment accounts the owner lists in the admin (Payment & delivery). Rows without a number are not shown. */
 const PAY_METHODS=["JazzCash","Easypaisa","MCB Bank","Meezan Bank","HBL","UBL","Bank Alfalah","Allied Bank","Bank Al Habib","Other bank"];
 function payAccounts(S){const p=S.pay||{};
