@@ -93,6 +93,11 @@
   <main class="wrap amain" id="manager">
     <!-- Orders -->
     <div class="panel" id="tab-orders">
+      <div class="orow">
+        <div class="chips" id="oFilter" role="group" aria-label="Status filter"></div>
+        <button class="sm" type="button" id="oRefresh">Refresh</button>
+      </div>
+      <input id="oSearch" type="search" placeholder="Search by name, phone or order number">
       <div class="stats">
         <div class="stat"><div class="k">Total orders</div><div class="v" id="stCount">0</div></div>
         <div class="stat"><div class="k">Awaiting payment</div><div class="v" id="stPending">0</div></div>
@@ -109,11 +114,6 @@
           <button class="btn rose" type="button" id="pasteSave" disabled>Save order</button>
         </div>
       </div>
-      <div class="orow">
-        <div class="chips" id="oFilter" role="group" aria-label="Status filter"></div>
-        <button class="sm" type="button" id="oRefresh">Refresh</button>
-      </div>
-      <input id="oSearch" type="search" placeholder="Search by name, phone or order number">
       <div id="oList" class="olist"></div>
     </div>
 
