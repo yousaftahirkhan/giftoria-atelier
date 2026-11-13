@@ -305,3 +305,8 @@ header.top .logo b{font-size:34px}
 footer{--logo-leaf:#A9C9B4}
 footer .logo b{font-size:32px;color:var(--bg)}
 @media (max-width:460px){header.top .logo b{font-size:29px}header.top .logo b .w2{font-size:8px;letter-spacing:.5em;margin-top:5px}.logo svg{width:30px;height:34px}}
+.paybox{background:var(--blush);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.paybox .pb-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.paybox .pb-head b{font-size:15px;color:var(--ink)}
+.paybox .pb-head span{font-family:var(--display);font-size:20px;color:var(--rose);font-variant-numeric:tabular-nums}
+.cp-accts{display:flex;flex-direction:column;gap:6px}

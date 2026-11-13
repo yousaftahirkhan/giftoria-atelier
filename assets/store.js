@@ -234,6 +234,7 @@ function renderCart(){
   const t=totals();
   $("tSub").textContent=rs(t.sub);$("tAddRow").hidden=!t.adds.length;$("tAdd").textContent=rs(t.addT);
   $("tDel").textContent="Paid to rider";$("tTot").textContent=rs(t.tot);
+  renderCheckoutPay(t);
   $("tAdvRow").hidden=!t.pct;$("tAdvLbl").textContent=t.pct>=100?"Due now (full payment)":`Advance due now (${t.pct}%)`;$("tAdv").textContent=rs(t.adv);
 }
 $("lines").addEventListener("click",e=>{const rm=e.target.closest("button[data-rm]");
@@ -299,6 +300,15 @@ function showPay(){
   $("waBtn").href=waLink(o);
   setStep("pay");setMsg("msg2","");
 }
+/* Payment box in the checkout step: amount due and every active payment method, with Copy buttons. */
+function renderCheckoutPay(t){
+  const acc=payAccounts(S);$("checkoutPay").hidden=!t.pct;
+  $("cpAmt").textContent=rs(t.adv);
+  $("cpNote").textContent=acc.length?`Pay ${rs(t.adv)} to any one of these accounts, then send the payment screenshot in our WhatsApp chat.`:"We will send our payment details on WhatsApp.";
+  $("cpAccts").innerHTML=acc.map((a,i)=>`<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="cpv${i}">${esc(a.v)}</div>${a.who?`<div class="sub">${esc(a.who)}</div>`:""}</div><button class="sm" type="button" data-cpc="${i}">Copy</button></div>`).join("");
+}
+$("cpAccts").addEventListener("click",e=>{const b=e.target.closest("[data-cpc]");if(!b)return;const el=$("cpv"+b.dataset.cpc);
+  navigator.clipboard.writeText(el.textContent).then(()=>toast("Account number copied")).catch(()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Number selected. Copy it manually.")})});
 $("accts").addEventListener("click",e=>{const b=e.target.closest("[data-cp]");if(!b)return;const el=$("acv"+b.dataset.cp);
   navigator.clipboard.writeText(el.textContent).then(()=>toast("Account number copied")).catch(()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Number selected. Copy it manually.")})});
 const waLink=o=>"https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent(typeof o==="string"?o:orderText(o));

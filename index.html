@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=vce8ee94o">
-<link rel="stylesheet" href="assets/store.css?v=vce8ee94o">
+<link rel="stylesheet" href="assets/base.css?v=v7e4be96p">
+<link rel="stylesheet" href="assets/store.css?v=v7e4be96p">
 </head>
 <body>
 
@@ -108,7 +108,7 @@
     <ol class="steps">
       <li><span class="n">1</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><b>Choose your gifts</b><span>Add bouquets, keepsakes and little extras to your cart.</span></li>
       <li><span class="n">2</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg><b>Place your order</b><span>Enter your name, phone, area and date. Your order opens in WhatsApp, ready to send.</span></li>
-      <li><span class="n">3</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><b>Pay and share the screenshot</b><span>We reply with our JazzCash and Easypaisa details. Pay the full amount and send the screenshot.</span></li>
+      <li><span class="n">3</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><b>Pay and share the screenshot</b><span>Pay the full amount to one of the accounts shown at checkout, then send the screenshot on WhatsApp.</span></li>
       <li><span class="n">4</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><b>Handmade and delivered</b><span>We make your order by hand and send it with an inDrive rider. You pay the rider's fare.</span></li>
     </ol>
   </section>
@@ -210,6 +210,11 @@
         <label for="fTime">Time of day<select id="fTime"><option>Any time</option><option>Morning (10 am–1 pm)</option><option>Afternoon (1–5 pm)</option><option>Evening (5–9 pm)</option></select></label>
       </div>
       <p class="note" style="font-size:13px">Every piece is handmade, so it takes time to make. If you need it urgently, we will tell you on WhatsApp whether your date is possible.</p>
+      <div class="paybox" id="checkoutPay">
+        <div class="pb-head"><b>Payment</b><span id="cpAmt"></span></div>
+        <p class="note" id="cpNote"></p>
+        <div class="cp-accts" id="cpAccts"></div>
+      </div>
     </form>
   </div>
   <div class="totals" id="cartTotals">
@@ -239,7 +244,7 @@
 </aside>
 <div class="toast" id="toast" hidden></div>
 
-<script src="assets/common.js?v=vce8ee94o"></script>
-<script src="assets/store.js?v=vce8ee94o"></script>
+<script src="assets/common.js?v=v7e4be96p"></script>
+<script src="assets/store.js?v=v7e4be96p"></script>
 </body>
 </html>

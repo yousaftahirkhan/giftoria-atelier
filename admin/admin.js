@@ -254,15 +254,6 @@ function statusText(o, status) {
 }
 const statusLink = (o, st) => `https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(statusText(o, st))}`;
 
-/* WhatsApp message to the customer with the advance due and the shop's payment accounts. */
-function paymentText(o) {
-  const acc = payAccounts(S), shop = S.shop.name || "our shop";
-  const L = [`Hello ${o.name || ""}, thank you for your order with ${shop}.`, "", `Order ID: *${o.no}*`, `Total: ${rs(o.tot)}`, `*Amount to pay: ${rs(o.adv && o.adv < o.tot ? o.adv : o.tot)}*`, ""];
-  if (acc.length) { L.push("Please send the payment to any one of these accounts:"); acc.forEach(a => L.push(`• ${a.k}: ${a.v}${a.who ? " (" + a.who + ")" : ""}`)) }
-  else L.push("Our account details will follow in the next message.");
-  L.push("", "After paying, please share the payment screenshot in this chat. We will confirm your order once the payment is checked.");
-  return L.join("\n");
-}
 function renderStats() {
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
   $("stCount").textContent = ORDERS.filter(o => o.status !== "cancel").length;
@@ -306,7 +297,6 @@ function renderOrders() {
     <div class="ofoot">
       <span class="ostate">${esc(STATUS_LBL[o.status] || o.status)}</span>
       ${o.phone ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
-      ${o.phone && o.status === "new" && o.adv ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(paymentText(o))}" target="_blank" rel="noopener">Send payment details</a>` : ""}
       ${o.status === "sent" ? `<button class="sm" type="button" data-delivered="${esc(o.no)}">✓ Mark delivered</button>` : ""}
       ${["new", "paid", "making", "sent"].includes(o.status) ? `<button class="sm red" type="button" data-cancelopen="${esc(o.no)}">Cancel order</button>` : ""}
     </div>
@@ -486,7 +476,10 @@ M.addEventListener("input", e => {
   const el = e.target;
   if (el.dataset.b) { const v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-n") ? Math.max(0, +el.value || 0) : el.value; setPath(S, el.dataset.b, v); changed(); return }
   if (el.dataset.qp != null) { const p = S.products[+el.dataset.qp]; if (!p) return; p.price = Math.max(0, Math.round(+el.value || 0)); if (p.was && p.was <= p.price) p.was = 0; changed(); return }
-  if (el.dataset.li) { const [path, i, k, isNum] = el.dataset.li.split("|"); getPath(S, path)[+i][k] = isNum ? Math.max(0, +el.value || 0) : el.value; changed() }
+  if (el.dataset.li) { const [path, i, k, kind] = el.dataset.li.split("|");
+    if (kind === "b") { getPath(S, path)[+i][k] = el.checked; const row = el.closest(".lrow"); row.classList.toggle("off", !el.checked); row.querySelector(".switch .st").textContent = el.checked ? "Active" : "Inactive" }
+    else getPath(S, path)[+i][k] = kind === "1" ? Math.max(0, +el.value || 0) : el.value;
+    changed() }
 });
 M.addEventListener("change", async e => {
   const el = e.target;
@@ -498,7 +491,7 @@ M.addEventListener("change", async e => {
 M.addEventListener("click", e => {
   const rm = e.target.closest("[data-phrm]"), la = e.target.closest("[data-ladd]"), ld = e.target.closest("[data-ldel]"), gd = e.target.closest("[data-gdel]");
   if (rm) { setPath(S, rm.dataset.phrm, ""); fillThumbs(); changed() }
-  if (la) { let arr = getPath(S, la.dataset.ladd); if (!arr) { setPath(S, la.dataset.ladd, []); arr = getPath(S, la.dataset.ladd) } arr.push(la.dataset.ladd === "pay.accounts" ? {method: "Other bank"} : {}); renderLists(); changed() }
+  if (la) { let arr = getPath(S, la.dataset.ladd); if (!arr) { setPath(S, la.dataset.ladd, []); arr = getPath(S, la.dataset.ladd) } arr.push(la.dataset.ladd === "pay.accounts" ? {method: "JazzCash", title: "", number: "", active: true} : {}); renderLists(); changed() }
   if (ld) { const [path, i] = ld.dataset.ldel.split("|"); getPath(S, path).splice(+i, 1); renderLists(); changed() }
   if (gd) { S.gallery.splice(+gd.dataset.gdel, 1); renderGalEd(); changed() }
 });
@@ -517,10 +510,11 @@ function renderSlideEd() {
   fillThumbs();
 }
 const LISTS = {reviews: [["name", "Name"], ["city", "City"], ["text", "Review"]], addons: [["name", "Add-on name"], ["price", "Price (Rs, 0 = free)", "n"]],
-  "pay.accounts": [["method", "Bank / wallet", "s"], ["title", "Account title"], ["number", "Account number / IBAN"]]};
+  "pay.accounts": [["method", "Payment method", "s"], ["title", "Account title"], ["number", "Account number / IBAN"], ["active", "Status", "b"]]};
 function renderLists() {
   M.querySelectorAll("[data-list]").forEach(box => { const path = box.dataset.list, arr = getPath(S, path) || [], fs = LISTS[path];
-    box.innerHTML = arr.length ? arr.map((it, i) => `<div class="lrow" style="--n:${fs.length}">${fs.map(([k, l, t]) => { const id = `li_${path.replace(/\./g, "_")}_${i}_${k}`, li = `${path}|${i}|${k}|${t === "n" ? 1 : ""}`;
+    box.innerHTML = arr.length ? arr.map((it, i) => `<div class="lrow${fs.some(f => f[2] === "b") && it.active === false ? " off" : ""}" style="--n:${fs.length}">${fs.map(([k, l, t]) => { const id = `li_${path.replace(/\./g, "_")}_${i}_${k}`, li = `${path}|${i}|${k}|${t === "n" ? 1 : t === "b" ? "b" : ""}`;
+      if (t === "b") { const on = it[k] !== false; return `<div class="fld">${l}<label class="switch" for="${id}"><input type="checkbox" id="${id}" data-li="${li}"${on ? " checked" : ""}><span class="knob" aria-hidden="true"></span><span class="st">${on ? "Active" : "Inactive"}</span></label></div>` }
       return `<label class="fld" for="${id}">${l}${t === "s" ? `<select id="${id}" data-li="${li}">${PAY_METHODS.map(m => `<option${m === it[k] ? " selected" : ""}>${esc(m)}</option>`).join("")}</select>` : `<input id="${id}" ${t === "n" ? 'type="number" min="0" step="10"' : ""} data-li="${li}" value="${esc(it[k] ?? "")}">`}</label>` }).join("")}<button class="sm red" type="button" data-ldel="${path}|${i}" aria-label="Remove">×</button></div>`).join("")
       : `<p class="hint">Nothing added yet.</p>` });
 }

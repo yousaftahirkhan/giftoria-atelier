@@ -101,3 +101,12 @@ body{background:var(--bg)}
 .atop{--logo-leaf:#A9C9B4}
 .atop .logo b{font-size:28px}
 .scard .logo b{font-size:34px}
+/* payment methods: on/off switch */
+.switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--ink);font-weight:700;font-size:14px;padding:6px 0}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .knob{position:relative;width:42px;height:24px;border-radius:999px;background:var(--line);transition:background .15s;flex:none}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked+.knob{background:var(--emerald)}
+.switch input:checked+.knob::after{transform:translateX(18px)}
+.switch input:focus-visible+.knob{outline:3px solid var(--rose);outline-offset:2px}
+.lrow.off input:not([type=checkbox]),.lrow.off select{opacity:.5}

@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=vce8ee94o">
-<link rel="stylesheet" href="admin.css?v=vce8ee94o">
+<link rel="stylesheet" href="../assets/base.css?v=v7e4be96p">
+<link rel="stylesheet" href="admin.css?v=v7e4be96p">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -105,7 +105,6 @@
         <div class="stat"><div class="k">Sales this month</div><div class="v" id="stMonth">Rs 0</div></div>
       </div>
       <div class="banner warn" id="ordersOff" hidden>Order storage is not connected. Create a new access token that also includes the <b id="ordersRepoName">giftoria-orders</b> repository, then sign in again.</div>
-      </div>
       <div id="oList" class="olist"></div>
       <details class="box" id="pasteWrap">
         <summary><b>Add an order that came only on WhatsApp</b></summary>
@@ -115,7 +114,8 @@
         <div class="two">
           <button class="btn dark" type="button" id="pasteRead">Read message</button>
           <button class="btn rose" type="button" id="pasteSave" disabled>Save order</button>
-        </details>
+        </div>
+      </details>
     </div>
 
     <!-- Products -->
@@ -259,10 +259,10 @@
         <p class="hint">Deliveries are booked on inDrive within Multan. Customers pay the rider's fare on delivery; it is not added to the order total.</p>
       </div>
       <div class="box">
-        <h3>Payment accounts</h3>
-        <p class="hint">Customers see these after placing an order, and they are added to the order's WhatsApp message. Rows without an account number are not shown.</p>
+        <h3>Payment methods</h3>
+        <p class="hint">Customers see every <b>Active</b> method while placing their order, with a Copy button. Switch a method to <b>Inactive</b> to hide it without deleting it. Methods without an account number are not shown.</p>
         <div data-list="pay.accounts"></div>
-        <button class="sm" type="button" data-ladd="pay.accounts" style="align-self:start">+ Add account</button>
+        <button class="sm" type="button" data-ladd="pay.accounts" style="align-self:start">+ Add payment method</button>
       </div>
       <div class="box">
         <h3>Add-ons (shown in the cart)</h3>
@@ -284,8 +284,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js?v=vce8ee94o"></script>
-<script src="config.js?v=vce8ee94o"></script>
-<script src="admin.js?v=vce8ee94o"></script>
+<script src="../assets/common.js?v=v7e4be96p"></script>
+<script src="config.js?v=v7e4be96p"></script>
+<script src="admin.js?v=v7e4be96p"></script>
 </body>
 </html>
