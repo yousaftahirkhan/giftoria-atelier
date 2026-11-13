@@ -92,6 +92,27 @@ export async function readSession(secret, token, version = "1") {
   } catch (e) { return null }
 }
 
+/* ---------- payment screenshots ---------- */
+/* Website order IDs look like GA-261113-K7Q4 (shop initials, date, four characters). Screenshots are accepted only
+   for IDs dated within the last few days, so old or made-up IDs cannot be used to fill the repository. */
+export function recentOrderNo(no, now = Date.now()) {
+  const m = /^[A-Z]{1,4}-(\d{2})(\d{2})(\d{2})-[0-9A-Z]{4}$/.exec(String(no || ""));
+  if (!m) return false;
+  const t = Date.UTC(2000 + +m[1], +m[2] - 1, +m[3]);
+  return now - t < 4 * 864e5 && t - now < 2 * 864e5;
+}
+/* "jpg" or "png" when the base64 data starts like one of those images; otherwise "". */
+export function imageKind(b64) {
+  const s = String(b64 || "");
+  if (!/^[A-Za-z0-9+/]{16}/.test(s)) return "";
+  const h = atob(s.slice(0, 16));
+  if (h.charCodeAt(0) === 0xFF && h.charCodeAt(1) === 0xD8 && h.charCodeAt(2) === 0xFF) return "jpg";
+  if (h.slice(0, 4) === "\x89PNG") return "png";
+  return "";
+}
+/* Short random text without look-alike characters, for file names. */
+export const randomId = n => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => "abcdefghijkmnpqrstuvwxyz23456789"[b % 32]).join("");
+
 /* ---------- GitHub App installation tokens ---------- */
 function pemToDer(pem) { return Uint8Array.from(atob(String(pem).replace(/-----[^-]+-----/g, "").replace(/\s/g, "")), c => c.charCodeAt(0)) }
 /* A 9-minute JWT that identifies the GitHub App itself; the private key must be PKCS#8 ("BEGIN PRIVATE KEY"). */

@@ -8,11 +8,14 @@
    Alternative sign-in (GET /callback): "Sign in with GitHub". GitHub checks the password and authenticator code;
    this service swaps GitHub's one-time code for an 8-hour user token and returns it in the URL fragment.
 
+   Website orders: POST /proof stores the customer's payment screenshot and POST /order stores the order, both in
+   the private orders repository, so they appear in the super admin.
+
    Settings: wrangler.toml [vars] and Cloudflare secrets (marked *):
      ADMIN_URL, SITE_ORIGINS (other addresses the shop is served from), REPO_OWNER, SITE_REPO, ORDERS_REPO, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
      ALLOWED_EMAILS*, TOTP_SECRET*, SESSION_SECRET*, GITHUB_APP_PRIVATE_KEY*, GITHUB_CLIENT_SECRET*
    Changing SESSION_VERSION signs everyone out.                                                                     */
-import {verifyGoogleIdToken, checkTotp, makeSession, readSession, installationToken} from "./lib.js";
+import {verifyGoogleIdToken, checkTotp, makeSession, readSession, installationToken, recentOrderNo, imageKind, randomId} from "./lib.js";
 
 const UA = "giftoria-auth";
 const SHORT = 12 * 3600e3, LONG = 30 * 864e5;
@@ -25,6 +28,7 @@ export default {
       if (url.pathname === "/login" && request.method === "POST") return await login(request, env);
       if (url.pathname === "/token" && request.method === "POST") return await refresh(request, env);
       if (url.pathname === "/order" && request.method === "POST") return await placeOrder(request, env);
+      if (url.pathname === "/proof" && request.method === "POST") return await saveProof(request, env);
       if (url.pathname === "/callback") return await githubCallback(url, env);
       if (url.pathname === "/") return new Response("Giftoria Atelier admin sign-in service.", {headers: {"content-type": "text/plain; charset=utf-8"}});
     } catch (e) {
@@ -44,7 +48,14 @@ function reply(request, env, body, status = 200) {
   return new Response(JSON.stringify(body), {status, headers: {"content-type": "application/json", "cache-control": "no-store", ...cors(request, env)}});
 }
 const allowedEmails = env => String(env.ALLOWED_EMAILS || "").toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
-const repoToken = env => installationToken({privateKeyPem: env.GITHUB_APP_PRIVATE_KEY, issuer: env.GITHUB_CLIENT_ID, owner: env.REPO_OWNER, repos: [env.SITE_REPO, env.ORDERS_REPO], userAgent: UA});
+/* GitHub tokens last an hour; one is reused while it has more than 15 minutes left, which saves signing a new
+   request for every order. */
+let cachedToken = null;
+async function repoToken(env) {
+  if (cachedToken && cachedToken.exp - Date.now() > 15 * 60e3) return cachedToken;
+  cachedToken = await installationToken({privateKeyPem: env.GITHUB_APP_PRIVATE_KEY, issuer: env.GITHUB_CLIENT_ID, owner: env.REPO_OWNER, repos: [env.SITE_REPO, env.ORDERS_REPO], userAgent: UA});
+  return cachedToken;
+}
 
 /* Slows down code guessing: at most 8 wrong codes per account in 15 minutes (per Cloudflare instance). A Google
    sign-in to an allowed account is already needed before any code is checked. */
@@ -137,8 +148,12 @@ async function placeOrder(request, env) {
   const items = (Array.isArray(o.items) ? o.items : []).slice(0, 30).map(i => ({name: str(i.name, 80), qty: Math.max(1, Math.min(99, Math.round(+i.qty || 1))), price: money(i.price)})).filter(i => i.name);
   const phone = str(o.phone, 20);
   if (!items.length || !str(o.name, 80) || digits(phone).length < 10) return reply(request, env, {error: "bad_order"}, 400);
-  const rec = {no, items, sub: money(o.sub), addT: money(o.addT), del: money(o.del), tot: money(o.tot), adv: money(o.adv), rest: money(o.rest), pct: Math.min(100, money(o.pct)),
+  const pct = Math.min(100, money(o.pct));
+  /* the payment screenshot uploaded during checkout (POST /proof); only a file named after this order is accepted */
+  const proof = typeof o.proof === "string" && new RegExp("^proofs/" + no + "-[a-z0-9]{6}\\.(?:jpg|png)$").test(o.proof) ? o.proof : "";
+  const rec = {no, items, sub: money(o.sub), addT: money(o.addT), del: money(o.del), tot: money(o.tot), adv: money(o.adv), rest: money(o.rest), pct,
     name: str(o.name, 80), phone, city: str(o.city, 40), area: str(o.area, 80), addr: str(o.addr, 300), needTxt: str(o.needTxt, 60), need: /^\d{4}-\d{2}-\d{2}$/.test(String(o.need || "")) ? o.need : "", card: str(o.card, 200), note: str(o.note, 200),
+    proofs: proof ? [{p: proof, k: pct >= 100 ? "full" : "advance", at: Date.now()}] : [], proofLater: !proof && o.proofLater === true,
     status: money(o.adv) > 0 ? "new" : "paid", at: Date.now(), source: "website"};
   const token = (await repoToken(env)).token;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -150,4 +165,26 @@ async function placeOrder(request, env) {
     if (w.status !== 409 && w.status !== 422) throw new Error("orders write " + w.status);
   }
   return reply(request, env, {error: "busy"}, 503);
+}
+
+/* ---------- payment screenshots from the website ----------
+   POST /proof {no, image} stores the customer's payment screenshot (base64 JPEG or PNG, about 1 MB at most) in the
+   private orders repository as proofs/<order ID>-<random>.jpg while they are still on the checkout form. The order
+   sent afterwards refers to it by that path. A new file is written every time, so nothing can be overwritten. */
+const PROOF_MAX = 1400000; // base64 characters
+async function saveProof(request, env) {
+  if (limited(request, "proof", 15)) return reply(request, env, {error: "too_many"}, 429);
+  if (+(request.headers.get("content-length") || 0) > PROOF_MAX + 4000) return reply(request, env, {error: "too_large"}, 413);
+  const b = await request.json().catch(() => ({}));
+  const no = str(b.no, 20).toUpperCase();
+  if (!recentOrderNo(no)) return reply(request, env, {error: "bad_order"}, 400);
+  const data = String(b.image || "").replace(/^data:image\/[a-z]+;base64,/, "");
+  if (data.length > PROOF_MAX) return reply(request, env, {error: "too_large"}, 413);
+  const ext = data.length > 600 ? imageKind(data) : "";
+  if (!ext) return reply(request, env, {error: "bad_image"}, 400);
+  const path = `proofs/${no}-${randomId(6)}.${ext}`;
+  const token = (await repoToken(env)).token;
+  const w = await fetch(ordersUrl(env) + "/contents/" + path, {method: "PUT", headers: ghHeaders(token), body: JSON.stringify({message: "Payment screenshot for " + no, content: data})});
+  if (!w.ok) throw new Error("proof write " + w.status);
+  return reply(request, env, {ok: true, path});
 }

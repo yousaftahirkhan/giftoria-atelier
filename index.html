@@ -12,8 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=v7e4be96p">
-<link rel="stylesheet" href="assets/store.css?v=v7e4be96p">
+<link rel="stylesheet" href="assets/base.css?v=vpay50a">
+<link rel="stylesheet" href="assets/store.css?v=vpay50a">
 </head>
 <body>
 
@@ -107,9 +107,9 @@
     <div class="sec-head"><div><div class="eyebrow">Simple and secure</div><h2>How ordering works</h2></div></div>
     <ol class="steps">
       <li><span class="n">1</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><b>Choose your gifts</b><span>Add bouquets, keepsakes and little extras to your cart.</span></li>
-      <li><span class="n">2</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg><b>Place your order</b><span>Enter your name, phone, area and date. Your order opens in WhatsApp, ready to send.</span></li>
-      <li><span class="n">3</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><b>Pay and share the screenshot</b><span>Pay the full amount to one of the accounts shown at checkout, then send the screenshot on WhatsApp.</span></li>
-      <li><span class="n">4</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><b>Handmade and delivered</b><span>We make your order by hand and send it with an inDrive rider. You pay the rider's fare.</span></li>
+      <li><span class="n">2</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><b id="how2t">Pay and upload the screenshot</b><span id="how2">Enter your details, pay to one of our accounts and add the screenshot. Your order then opens in WhatsApp, ready to send.</span></li>
+      <li><span class="n">3</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><b id="how3t">See it before you pay the rest</b><span id="how3">We confirm on WhatsApp, make your order by hand and send you a photo. Then you pay the rest.</span></li>
+      <li><span class="n">4</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><b>Delivered by inDrive</b><span>An inDrive rider brings it to your door. You pay the rider's fare.</span></li>
     </ol>
   </section>
 
@@ -211,9 +211,12 @@
       </div>
       <p class="note" style="font-size:13px">Every piece is handmade, so it takes time to make. If you need it urgently, we will tell you on WhatsApp whether your date is possible.</p>
       <div class="paybox" id="checkoutPay">
-        <div class="pb-head"><b>Payment</b><span id="cpAmt"></span></div>
+        <div class="pb-head"><b id="cpTitle">Payment</b><span id="cpAmt"></span></div>
         <p class="note" id="cpNote"></p>
         <div class="cp-accts" id="cpAccts"></div>
+        <input type="file" id="fProof" class="vh" accept="image/*" tabindex="-1" aria-label="Payment screenshot">
+        <div class="proof" id="proofBox"></div>
+        <ul class="assure" id="cpAssure"></ul>
       </div>
     </form>
   </div>
@@ -223,28 +226,27 @@
     <div class="r"><span>Delivery (inDrive)</span><span id="tDel">Paid to rider</span></div>
     <div class="r grand"><span>Total</span><span id="tTot">Rs 0</span></div>
     <div class="r adv" id="tAdvRow"><span id="tAdvLbl">Advance</span><span id="tAdv">Rs 0</span></div>
+    <div class="r rest" id="tRestRow" hidden><span>Rest, after you see your order</span><span id="tRest">Rs 0</span></div>
     <button class="btn rose block" id="checkoutBtn" type="button">Continue to checkout →</button>
     <a class="btn wa block" id="confirmBtn" href="#" target="_blank" rel="noopener" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg> Place order on WhatsApp</a>
-    <p class="note" id="confirmNote" style="text-align:center;font-size:13px" hidden>Delivery is by inDrive: you pay the rider's fare on delivery. Your WhatsApp chat with us opens with the order ready. Just tap Send.</p>
+    <p class="note" id="confirmNote" style="text-align:center;font-size:13px" hidden>Delivery by inDrive: you pay the rider's fare. WhatsApp opens with your order ready; just tap Send.</p>
     <div class="msg" id="msg"></div>
   </div>
   <div class="dbody" id="payStep" hidden>
+    <div class="placed"><span class="tick" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><div><b id="placedT">Thank you, your order is placed</b><span id="placedS"></span></div></div>
     <div class="receipt" id="receipt"></div>
-    <div class="paybig" id="payBig"></div>
-    <div id="accts" style="display:flex;flex-direction:column;gap:8px"></div>
-    <p class="note" id="payNote"></p>
+    <div class="next"><h3>What happens next</h3><ol id="nextSteps"></ol></div>
+    <div class="cp-accts" id="accts" hidden></div>
     <a class="btn wa block" id="waBtn" href="#" target="_blank" rel="noopener">Open WhatsApp chat again</a>
     <button class="btn ghost block" id="copyBtn" type="button">Copy order message</button>
     <div class="msg" id="msg2"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between">
-      <button class="sm" id="backBtn" type="button">← Edit cart</button>
-      <button class="sm" id="newOrderBtn" type="button">Start a new order</button>
-    </div>
+    <p class="note" style="text-align:center;font-size:13px">Need to change something? Message us on WhatsApp with your order ID.</p>
+    <button class="sm" id="newOrderBtn" type="button" style="align-self:center">Start a new order</button>
   </div>
 </aside>
 <div class="toast" id="toast" hidden></div>
 
-<script src="assets/common.js?v=v7e4be96p"></script>
-<script src="assets/store.js?v=v7e4be96p"></script>
+<script src="assets/common.js?v=vpay50a"></script>
+<script src="assets/store.js?v=vpay50a"></script>
 </body>
 </html>

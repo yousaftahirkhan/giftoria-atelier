@@ -142,8 +142,13 @@ function renderChrome(){
   $("trustDelT").textContent="Delivery across "+(s.city||"Multan");
   {const cur=$("fArea").value||load("gd-cust",{}).fArea||"";
    $("fArea").innerHTML=`<option value="">Select your area</option>`+shopAreas(S).map(a=>`<option${a===cur?" selected":""}>${esc(a)}</option>`).join("")+`<option value="Other"${cur==="Other"?" selected":""}>Other area (write it in the address)</option>`}
+  const part=pct>0&&pct<100;
   $("trustPayT").textContent=pct?(pct>=100?"Full payment upfront":pct+"% advance"):"Cash on delivery";
-  $("trustPay").textContent=pct?(payAccounts(S).map(a=>a.k).join(", ")||"JazzCash, Easypaisa, bank"):"Pay on delivery";
+  $("trustPay").textContent=pct?(part?"The rest after you see your order":(payAccounts(S).map(a=>a.k).join(", ")||"JazzCash, Easypaisa, bank")):"Pay on delivery";
+  $("how2t").textContent=pct?(part?`Pay ${pct}% and upload the screenshot`:"Pay and upload the screenshot"):"Place your order";
+  $("how2").textContent=pct?`Enter your details, pay ${part?"the advance":"the full amount"} to one of our accounts and add the screenshot. Your order then opens in WhatsApp, ready to send.`:"Enter your details. Your order opens in WhatsApp, ready to send.";
+  $("how3t").textContent=part?"See it before you pay the rest":"We confirm and make it";
+  $("how3").textContent=part?`We confirm on WhatsApp, make your order by hand and send you a photo of it. Then you pay the remaining ${100-pct}%.`:"We check your payment, confirm your order on WhatsApp and make it by hand.";
   const wa="https://wa.me/"+intl(s.wa)+"?text="+encodeURIComponent("Hello! I have a question about "+(s.name||"your shop")+".");
   $("waFloat").href=wa;$("waFloat").hidden=!intl(s.wa);
   const soc=[["insta","Instagram"],["fb","Facebook"],["tiktok","TikTok"]].filter(([k])=>safeUrl(S.social[k]));
@@ -236,6 +241,7 @@ function renderCart(){
   $("tDel").textContent="Paid to rider";$("tTot").textContent=rs(t.tot);
   renderCheckoutPay(t);
   $("tAdvRow").hidden=!t.pct;$("tAdvLbl").textContent=t.pct>=100?"Due now (full payment)":`Advance due now (${t.pct}%)`;$("tAdv").textContent=rs(t.adv);
+  $("tRestRow").hidden=!(t.pct&&t.rest>0);$("tRest").textContent=rs(t.rest);
 }
 $("lines").addEventListener("click",e=>{const rm=e.target.closest("button[data-rm]");
   if(rm){const p=findP(rm.dataset.rm);delete cart[rm.dataset.rm];persist();refreshProducts();toast((p?p.name:"Item")+" removed from cart");return}
@@ -246,10 +252,10 @@ $("addonBox").addEventListener("change",e=>{const c=e.target.closest("[data-ad]"
 
 let ORDER=null;
 function buildOrder(){
-  const t=totals();
+  const t=totals(),no=draftNo();
   const items=Object.entries(cart).map(([id,q])=>{const p=findP(id);return{name:p.name,qty:q,price:p.price}});
   t.adds.forEach(a=>items.push({name:"Add-on: "+a.name,qty:1,price:+a.price||0}));
-  return {no:makeOrderNo(S.shop.name),items,...t,name:$("fName").value.trim(),phone:$("fPhone").value.trim(),city:S.shop.city||"Multan",
+  return {no,items,...t,proof:PROOF.state==="done"&&PROOF.no===no?PROOF.path:"",proofLater:PROOF.state==="skip",name:$("fName").value.trim(),phone:$("fPhone").value.trim(),city:S.shop.city||"Multan",
     area:$("fArea").value==="Other"?"":$("fArea").value,addr:$("fAddr").value.trim(),need:$("fDate").value,needTxt:`${fmtDate($("fDate").value)}, ${$("fTime").value}`,note:"",card:""};
 }
 /* The shop's super admin reads this exact message format back in (Orders → Add an order from WhatsApp). */
@@ -258,7 +264,11 @@ function orderText(o){
   const L=[`*${S.shop.name} | New Order*`,`Order ID: *${o.no}*`,`Date: ${day}`,"","*Items*"];
   o.items.forEach(i=>L.push(`• ${i.name} × ${i.qty} — ${rs(i.price*i.qty)}`));
   L.push("",`*Total: ${rs(o.tot)}*`);
-  if(o.pct){L.push(o.pct>=100?`Paying in full now: ${rs(o.adv)}`:`Advance due (${o.pct}%): ${rs(o.adv)}`);if(o.rest>0)L.push(`Balance on delivery: ${rs(o.rest)}`)}
+  if(o.pct){
+    if(o.pct>=100)L.push(`${o.proof?"Paid in full":"Full payment"}: ${rs(o.adv)}`);
+    else L.push(`Advance${o.proof?" paid":""} (${o.pct}%): ${rs(o.adv)}`,`Remaining after the photo: ${rs(o.rest)}`);
+    if(o.proof)L.push("Payment screenshot: uploaded with the order");else if(o.proofLater)L.push("Payment screenshot: I will send it in this chat");
+  }
   L.push("","*Delivery details*",`Name: ${o.name}`,`Phone: ${o.phone}`,`City: ${o.city}`,...(o.area?[`Area: ${o.area}`]:[]),`Address: ${o.addr}`);
   L.push(`Delivery: by inDrive, fare paid to the rider`);
   if(o.need)L.push(`Needed by: ${o.needTxt||fmtDate(o.need)}`);
@@ -274,38 +284,90 @@ function check(){
   if(!$("fArea").value)return "Please select your area.";
   if(!$("fDate").value)return "Please choose the date you need it.";
   if(!$("fAddr").value.trim())return "Please enter your delivery address.";
+  const t=totals();
+  if(proofNeeded(t)){
+    if(PROOF.state==="busy")return "Your screenshot is still uploading. Please wait a moment.";
+    if(PROOF.state!=="done"&&PROOF.state!=="skip")return `Please pay ${rs(t.adv)} and upload the payment screenshot.`;
+  }
   return "";
 }
 function showPay(){
-  const o=ORDER;
+  const o=ORDER,part=o.pct>0&&o.pct<100,acc=payAccounts(S);
   $("cartTitle").textContent="Order "+o.no;
-  $("receipt").innerHTML=`<div class="sub">Order number</div><div class="ono">${esc(o.no)}</div><hr>
+  $("placedS").innerHTML=`Order ID <b>${esc(o.no)}</b>. Tap <b>Send</b> in WhatsApp so we receive your order.`;
+  $("receipt").innerHTML=`<div class="sub">Order ID</div><div class="ono">${esc(o.no)}</div><hr>
     ${o.items.map(i=>`<div class="r"><span>${esc(i.name)} × ${i.qty}</span><span>${rs(i.price*i.qty)}</span></div>`).join("")}
     <div class="r"><span>Delivery (inDrive)</span><span>Paid to rider</span></div><hr>
     <div class="r" style="font-weight:800"><span>Total</span><span>${rs(o.tot)}</span></div>
-    <div class="r sub"><span>${esc(o.name)} · ${esc(o.phone)}</span><span>${esc(o.city)}</span></div>
-    ${o.need?`<div class="r sub"><span>Needed by</span><span>${esc(fmtDate(o.need))}</span></div>`:""}
-    ${o.card?`<div class="r sub"><span>Card</span><span>${esc(o.card)}</span></div>`:""}`;
-  const acc=payAccounts(S);
-  if(o.pct){
-    $("payBig").hidden=false;
-    $("payBig").innerHTML=`<div class="sub">${o.pct>=100?"Send full payment":"Send advance"}</div><div class="amt">${rs(o.adv)}</div>${o.rest>0?`<div class="sub">Balance ${rs(o.rest)} on delivery</div>`:""}`;
-    $("accts").innerHTML=acc.length?acc.map((a,i)=>`<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="acv${i}">${esc(a.v)}</div>${a.who?`<div class="sub">${esc(a.who)}</div>`:""}</div><button class="sm" type="button" data-cp="${i}">Copy</button></div>`).join("")
-      :`<div class="acct"><div><div class="k">Payment</div><div class="v">Account details will be shared on WhatsApp</div></div></div>`;
-    $("payNote").textContent="Your order is placed but not yet confirmed. Your WhatsApp chat with us has opened with this order: tap Send there, then pay the advance and share the payment screenshot in the same chat. We confirm your order once we have checked the payment.";
-  } else {
-    $("payBig").hidden=true;$("accts").innerHTML="";
-    $("payNote").textContent="Your WhatsApp chat with us has opened with this order. Tap Send there. You pay on delivery.";
-  }
+    ${o.pct?(part?`<div class="r"><span>Advance (${o.pct}%)${o.proof?" · paid":""}</span><span>${rs(o.adv)}</span></div><div class="r sub"><span>Remaining, after you see the photo</span><span>${rs(o.rest)}</span></div>`
+      :`<div class="r"><span>${o.proof?"Paid in full":"Full payment"}</span><span>${rs(o.adv)}</span></div>`):""}
+    <div class="r sub"><span>${esc(o.name)} · ${esc(o.phone)}</span><span>${esc(o.area||o.city)}</span></div>
+    ${o.need?`<div class="r sub"><span>Needed by</span><span>${esc(o.needTxt||fmtDate(o.need))}</span></div>`:""}`;
+  const steps=[];
+  if(o.pct&&!o.proof&&acc.length)steps.push(["Send your payment screenshot",`Pay ${rs(o.adv)} to one of the accounts below and send the screenshot in our WhatsApp chat.`]);
+  if(o.pct)steps.push(["We check your payment","Then we confirm your order on WhatsApp."]);
+  steps.push(["We make it by hand",part?"When it is ready, we send you a photo of it.":"Every piece is made to order for you."]);
+  if(part)steps.push([`You pay the remaining ${rs(o.rest)}`,"Once you have seen the photo. Then we book your inDrive rider."]);
+  steps.push(["Delivered to your door","An inDrive rider brings it to you. You pay the rider's fare."]);
+  $("nextSteps").innerHTML=steps.map(([b,t])=>`<li><b>${esc(b)}</b><span>${esc(t)}</span></li>`).join("");
+  const showAcc=!!(o.pct&&!o.proof&&acc.length);$("accts").hidden=!showAcc;
+  $("accts").innerHTML=showAcc?acc.map((a,i)=>`<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="acv${i}">${esc(a.v)}</div>${a.who?`<div class="sub">Account title: <b>${esc(a.who)}</b></div>`:""}</div><button class="sm" type="button" data-cp="${i}">Copy</button></div>`).join(""):"";
   $("waBtn").href=waLink(o);
   setStep("pay");setMsg("msg2","");
 }
-/* Payment box in the checkout step: amount due and every active payment method, with Copy buttons. */
+/* ---------- checkout payment: amount, accounts, the customer's screenshot and our promises ----------
+   The screenshot is uploaded as soon as it is chosen (while the customer finishes the form), so "Place order"
+   can open WhatsApp straight away. It is saved privately for the super admin under a draft order ID. */
+let DRAFT_NO=null,PROOF={state:"none"},proofSeq=0;
+const draftNo=()=>DRAFT_NO||(DRAFT_NO=makeOrderNo(S.shop.name));
+const proofNeeded=t=>!!(t.pct&&payAccounts(S).length);
+const ICON_OK=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+const ICON_IMG=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>`;
 function renderCheckoutPay(t){
-  const acc=payAccounts(S);$("checkoutPay").hidden=!t.pct;
+  const acc=payAccounts(S),part=t.pct>0&&t.pct<100;
+  $("checkoutPay").hidden=!t.pct;if(!t.pct)return;
+  $("cpTitle").textContent=part?`Pay ${t.pct}% advance now`:"Pay in full now";
   $("cpAmt").textContent=rs(t.adv);
-  $("cpNote").textContent=acc.length?`Pay ${rs(t.adv)} to any one of these accounts, then send the payment screenshot in our WhatsApp chat.`:"We will send our payment details on WhatsApp.";
-  $("cpAccts").innerHTML=acc.map((a,i)=>`<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="cpv${i}">${esc(a.v)}</div>${a.who?`<div class="sub">${esc(a.who)}</div>`:""}</div><button class="sm" type="button" data-cpc="${i}">Copy</button></div>`).join("");
+  $("cpNote").innerHTML=(acc.length?`Send <b>${rs(t.adv)}</b> to any one account below, then upload the screenshot.`:"We will send our payment details on WhatsApp.")
+    +(part?` The remaining <b>${rs(t.rest)}</b> is paid after we send you a photo of your finished order.`:"");
+  $("cpAccts").innerHTML=acc.map((a,i)=>`<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="cpv${i}">${esc(a.v)}</div>${a.who?`<div class="sub">Account title: <b>${esc(a.who)}</b></div>`:""}</div><button class="sm" type="button" data-cpc="${i}">Copy</button></div>`).join("")
+    +(acc.some(a=>a.who)?`<p class="note small">Your payment app shows the account title before you confirm. Check that it matches.</p>`:"");
+  $("proofBox").hidden=!acc.length;if(acc.length)renderProof();
+  $("cpAssure").innerHTML=["We confirm your payment on WhatsApp, with your order ID.",...(part?["You see a photo of your finished order before you pay the rest."]:[]),
+    `If we cannot deliver on your date, your ${part?"advance":"payment"} is refunded in full.`].map(x=>`<li>${ICON_OK}<span>${x}</span></li>`).join("");
+}
+function renderProof(){
+  const p=PROOF,pic=p.url?`<img src="${esc(p.url)}" alt="Your payment screenshot">`:`<span class="ph">${ICON_IMG}</span>`;
+  if(p.state==="none"){$("proofBox").innerHTML=`<button type="button" class="proof-pick" data-proof="pick">${ICON_IMG}<span><b>Upload payment screenshot</b><small>After paying, take a screenshot of the confirmation and add it here.</small></span></button>`;return}
+  if(p.state==="skip"){$("proofBox").innerHTML=`<div class="proof-row"><span class="ph">${ICON_IMG}</span><div class="pr-t"><b>Screenshot on WhatsApp</b><small>Send it in our WhatsApp chat after placing your order.</small></div><button type="button" class="sm" data-proof="pick">Upload now</button></div>`;return}
+  const T={busy:["Uploading your screenshot…","Please keep this page open."],done:["Screenshot uploaded","We check it before confirming your order."],error:["Upload failed",p.err||"Check your connection and try again."]}[p.state];
+  $("proofBox").innerHTML=`<div class="proof-row ${p.state}">${pic}<div class="pr-t"><b>${T[0]}</b><small>${esc(T[1])}</small></div>${p.state==="busy"?`<span class="spin" aria-hidden="true"></span>`:`<button type="button" class="sm" data-proof="pick">${p.state==="done"?"Change":"Try again"}</button>`}</div>`
+    +(p.state==="error"?`<button type="button" class="link proof-skip" data-proof="skip">Can't upload? Send the screenshot on WhatsApp instead</button>`:"");
+}
+$("proofBox").addEventListener("click",e=>{const b=e.target.closest("[data-proof]");if(!b)return;
+  if(b.dataset.proof==="pick"){$("fProof").value="";$("fProof").click()}
+  else if(b.dataset.proof==="skip"){proofSeq++;PROOF={state:"skip"};renderProof();setMsg("msg","")}});
+$("fProof").addEventListener("change",()=>{const f=$("fProof").files[0];if(f)uploadProof(f)});
+async function uploadProof(file){
+  const id=++proofSeq,no=draftNo();
+  if(PROOF.url)URL.revokeObjectURL(PROOF.url);
+  PROOF={state:"busy"};renderProof();setMsg("msg","");
+  try{
+    let b=await toJpeg(file,1600,.82);if(b.size>900000)b=await toJpeg(file,1200,.72);
+    if(id!==proofSeq)return;
+    PROOF.url=URL.createObjectURL(b);renderProof();
+    const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),45000);
+    let r;try{r=await fetch(ORDER_API+"/proof",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({no,image:await blobB64(b)}),signal:ctl.signal})}finally{clearTimeout(tm)}
+    const d=await r.json().catch(()=>({}));
+    if(id!==proofSeq)return;
+    if(!r.ok||!d.path)throw new Error(d.error||"upload");
+    PROOF={state:"done",url:PROOF.url,path:d.path,no};
+  }catch(e){
+    if(id!==proofSeq)return;
+    const m=e&&e.message;
+    PROOF={state:"error",url:PROOF.url,err:m==="decode"?"This file could not be opened. Please choose a JPG or PNG screenshot.":m==="too_large"?"This image is too large. Please choose the screenshot again.":m==="too_many"?"Too many uploads. Please wait a few minutes and try again.":"Check your connection and try again."};
+  }
+  renderProof();
 }
 $("cpAccts").addEventListener("click",e=>{const b=e.target.closest("[data-cpc]");if(!b)return;const el=$("cpv"+b.dataset.cpc);
   navigator.clipboard.writeText(el.textContent).then(()=>toast("Account number copied")).catch(()=>{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Number selected. Copy it manually.")})});
@@ -315,9 +377,10 @@ const waLink=o=>"https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent(typ
 /* "Place order" is a real link: the click handler checks the form, creates the order and points the link at the
    shop's WhatsApp chat before the browser follows it, so one tap places the order and opens the chat. */
 $("confirmBtn").addEventListener("click",e=>{
-  const err=check();if(err){e.preventDefault();setMsg("msg",err,true);return}setMsg("msg","");
+  const err=check();if(err){e.preventDefault();setMsg("msg",err,true);if(/screenshot/.test(err))$("checkoutPay").scrollIntoView({behavior:"smooth",block:"center"});return}setMsg("msg","");
   save("gd-cust",{fName:$("fName").value,fPhone:$("fPhone").value,fArea:$("fArea").value,fAddr:$("fAddr").value});
-  ORDER=buildOrder();$("confirmBtn").href=waLink(ORDER);rememberOrder(ORDER);sendOrder(ORDER);showPay();
+  ORDER=buildOrder();$("confirmBtn").href=waLink(ORDER);rememberOrder(ORDER);sendOrder(ORDER);
+  DRAFT_NO=null;proofSeq++;PROOF={state:"none"};showPay();
 });
 $("waBtn").addEventListener("click",()=>setMsg("msg2","Opening WhatsApp. If it does not open, copy the message and send it to "+S.shop.wa+"."));
 $("copyBtn").onclick=()=>navigator.clipboard.writeText(orderText(ORDER)).then(()=>setMsg("msg2","Message copied. Paste it in a WhatsApp chat with "+S.shop.wa+"."))
@@ -328,15 +391,14 @@ let STEP="cart";
 function setStep(s){STEP=s;
   $("cartTitle").textContent=s==="cart"?"Your cart":s==="details"?"Delivery details":$("cartTitle").textContent;
   $("cartStep").hidden=s!=="cart";$("detailsStep").hidden=s!=="details";$("payStep").hidden=s!=="pay";$("cartTotals").hidden=s==="pay";
-  $("checkoutBtn").hidden=s!=="cart";$("confirmBtn").hidden=s!=="details";$("confirmNote").hidden=s!=="details";setMsg("msg","");
+  $("checkoutBtn").hidden=s!=="cart";$("confirmBtn").hidden=s!=="details";$("confirmNote").hidden=s!=="details";setMsg("msg","");$("cartTotals").classList.toggle("compact",s==="details");
   const b=$("drawer").querySelector(s==="details"?"#detailsStep":"#cartStep");if(b)b.scrollTop=0}
 function backToCart(){setStep("cart")}
 {const t=new Date(),p=n=>String(n).padStart(2,"0");$("fDate").min=`${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`}
 $("checkoutBtn").onclick=()=>{if(!Object.keys(cart).length){setMsg("msg","Please add an item to your cart.",true);return}setStep("details");setTimeout(()=>$("fName").focus(),50)};
 $("toCartBtn").onclick=()=>setStep("cart");
 const openCart=()=>{if(STEP!=="pay")setStep("cart");show($("drawer"))};
-$("backBtn").onclick=backToCart;
-$("newOrderBtn").onclick=()=>{cart={};addSel={};persist();ORDER=null;refreshProducts();backToCart();toast("Cart cleared")};
+$("newOrderBtn").onclick=()=>{cart={};addSel={};persist();ORDER=null;DRAFT_NO=null;proofSeq++;PROOF={state:"none"};refreshProducts();backToCart();toast("Cart cleared")};
 
 /* Saves the order for the shop. WhatsApp still opens either way, so a network problem never blocks the customer. */
 function sendOrder(o){

@@ -92,6 +92,22 @@ function payAccounts(S){const p=S.pay||{};
   const a=[];if(p.jazz)a.push({k:"JazzCash",v:p.jazz,who:p.jazzName});if(p.easy)a.push({k:"Easypaisa",v:p.easy,who:p.easyName});
   if(p.iban)a.push({k:p.bank||"Bank transfer",v:p.iban,who:p.bankName});return a}
 
+/* Payment screenshots are re-encoded as a JPEG in the browser (at most `max` pixels on the long side), so an
+   upload stays around 150–400 KB and still reads clearly. Throws "decode" when the browser cannot open the file. */
+async function toJpeg(file,max,q){
+  let src=null,url="";
+  if(window.createImageBitmap){try{src=await createImageBitmap(file)}catch(e){src=null}}
+  if(!src)src=await new Promise((res,rej)=>{url=URL.createObjectURL(file);const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error("decode"));im.src=url});
+  try{
+    const w=src.width||src.naturalWidth,h=src.height||src.naturalHeight;if(!w||!h)throw new Error("decode");
+    const s=Math.min(1,max/Math.max(w,h)),c=document.createElement("canvas");c.width=Math.max(1,Math.round(w*s));c.height=Math.max(1,Math.round(h*s));
+    const x=c.getContext("2d");x.fillStyle="#FFFFFF";x.fillRect(0,0,c.width,c.height);x.drawImage(src,0,0,c.width,c.height);
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",q||.82));if(!b)throw new Error("decode");return b;
+  }finally{if(url)URL.revokeObjectURL(url)}
+}
+const blobB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=()=>rej(new Error("read"));r.readAsDataURL(b)});
+const randId=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>"abcdefghijkmnpqrstuvwxyz23456789"[b%32]).join("");
+
 /* Order IDs look like GA-261112-K7Q4: shop initials, order date (YYMMDD) and four random characters
    without look-alikes (no O/0, I/1, L), so customers can read them out on a call. */
 function makeOrderNo(shopName){

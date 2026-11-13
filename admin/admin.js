@@ -1,7 +1,8 @@
-/* Super admin. Signs in with a GitHub access token, then:
+/* Super admin. Signs in with Google + an authenticator code (or GitHub), then:
+   - orders and the customers' payment screenshots are kept in a separate private repository (orders.json and
+     proofs/), so customer details never go public; new orders play a chime while this page is open;
    - content (products, homepage, business, payments) is edited here and published as one commit to the
-     website repository: data/shop.json plus any new photos under images/;
-   - orders are kept in orders.json in a separate private repository, so customer details never go public. */
+     website repository: data/shop.json plus any new photos under images/. */
 "use strict";
 const CFG = window.ADMIN_CONFIG || {};
 const GH_OWNER = CFG.owner || location.hostname.split(".")[0];
@@ -26,16 +27,16 @@ async function gh(path, opts = {}) {
   try { return await ghOnce(path, opts) }
   catch (e) { if (MODE === "app" && e.status === 401) { await refreshAppToken(); return ghOnce(path, opts) } throw e }
 }
-async function ghOnce(path, {method = "GET", body, raw} = {}) {
+async function ghOnce(path, {method = "GET", body, raw, blob} = {}) {
   let r;
   try {
     r = await fetch("https://api.github.com" + path, {method, cache: "no-store",
-      headers: {Authorization: "Bearer " + TOKEN, Accept: raw ? "application/vnd.github.raw+json" : "application/vnd.github+json", ...(body ? {"Content-Type": "application/json"} : {})},
+      headers: {Authorization: "Bearer " + TOKEN, Accept: raw || blob ? "application/vnd.github.raw+json" : "application/vnd.github+json", ...(body ? {"Content-Type": "application/json"} : {})},
       body: body ? JSON.stringify(body) : undefined});
   } catch (e) { throw new GHError(0, "No internet connection. Check your connection and try again.") }
   if (!r.ok) { let m = ""; try { m = (await r.json()).message || "" } catch (e) {} throw new GHError(r.status, m) }
   if (r.status === 204) return null;
-  return raw ? r.text() : r.json();
+  return blob ? r.arrayBuffer() : raw ? r.text() : r.json();
 }
 function errText(e) {
   if (!e || e.status == null) return "Something went wrong. Please try again.";
@@ -66,13 +67,14 @@ async function signIn(t, mode = "user") {
   if (mode === "user") {
     const me = await gh("/user");
     if (!ADMINS.includes(String(me.login).toLowerCase())) { const e = new GHError(403, "not admin"); e.notAdmin = me.login; throw e }
+    ME = me.login;
   }
   await gh(SITE);
   try { await gh(ORD); ORDERS_OK = true } catch (e) { ORDERS_OK = false }
   await loadContent();
-  $("booting").hidden = true; $("signin").hidden = true; $("app").hidden = false;
+  $("booting").hidden = true; $("signin").hidden = true; $("app").hidden = false; renderMe(); renderBell();
   const h = location.hash.slice(1); selectTab(TABS.includes(h) ? h : "orders");
-  loadOrders();
+  loadOrders().finally(poll);
 }
 const signInError = e => e && e.notAdmin ? `The GitHub account ${e.notAdmin} is not allowed to manage this shop.` : e && e.status === 401 ? "Your sign-in has expired. Please sign in again." : errText(e);
 function showSignin(msg, where = "google") {
@@ -100,7 +102,7 @@ async function authPost(path, body) {
 }
 async function refreshAppToken() {
   const d = await authPost("/token", {session: SESSION});
-  TOKEN = d.token; TOKEN_EXP = d.token_exp; return d;
+  TOKEN = d.token; TOKEN_EXP = d.token_exp; if (d.email) ME = d.email; return d;
 }
 function initGoogle() {
   if (!CFG.googleClientId || !CFG.authUrl) return;
@@ -135,7 +137,7 @@ $("gStep2").addEventListener("submit", async e => {
   $("otpBtn").disabled = true; $("otpBtn").textContent = "Checking…"; $("gMsg").textContent = "";
   try {
     const d = await authPost("/login", {id_token: gCred, code, remember: $("trust").checked});
-    SESSION = d.session; keepSession(d.session, d.session_exp, $("trust").checked); TOKEN_EXP = d.token_exp; dropToken();
+    SESSION = d.session; keepSession(d.session, d.session_exp, $("trust").checked); TOKEN_EXP = d.token_exp; ME = d.email || ME; dropToken();
     await signIn(d.token, "app");
   } catch (err) {
     $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err);
@@ -169,38 +171,167 @@ $("signinForm").addEventListener("submit", async e => {
   catch (err) { TOKEN = ""; $("signMsg").textContent = err && err.status === 401 ? "This access token is not valid or has expired. Check it and try again." : signInError(err) }
   finally { $("signBtn").disabled = false; $("signBtn").textContent = "Sign in with token" }
 });
-$("signOut").onclick = () => {
+function signOutNow() {
   if (dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
   dirty = false; dropToken(); dropSession(); try { google.accounts.id.disableAutoSelect() } catch (e) {}
   history.replaceState(null, "", location.pathname); location.reload();
-};
+}
+$("signOut").onclick = signOutNow; $("signOut2").onclick = signOutNow;
 
-/* ---------- tabs ---------- */
+/* ---------- sections ---------- */
 const TABS = ["orders", "products", "home", "business", "pay"];
+const PAGES = {
+  orders: ["Orders", "Website orders arrive here on their own, with the customer's payment screenshot."],
+  products: ["Products", "What customers can order: photos, prices, categories and stock."],
+  home: ["Homepage", "Announcement, slides, promo banner, photos, reviews and your story."],
+  business: ["Business info", "Shop details, delivery areas, contact numbers and policies."],
+  pay: ["Payments & delivery", "The advance, the accounts customers pay into, and cart add-ons."]
+};
 function selectTab(t) {
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === t));
   TABS.forEach(k => $("tab-" + k).hidden = k !== t);
   $("saveBar").hidden = t === "orders";
-  history.replaceState(null, "", "#" + t); scrollTo(0, 0);
+  const short = document.querySelector(`.tab[data-tab="${t}"] .t`).textContent;
+  $("pageTitle").innerHTML = `<span class="tl">${esc(PAGES[t][0])}</span><span class="ts">${esc(short)}</span>`; $("pageSub").textContent = PAGES[t][1];
+  closePops(); history.replaceState(null, "", "#" + t); scrollTo(0, 0);
 }
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => selectTab(b.dataset.tab));
 
-/* =====================================================================
-   ORDERS (private repository: orders.json)
-   ===================================================================== */
-const STATUS = [["new","Awaiting payment"],["paid","Payment approved"],["making","In progress"],["sent","Out for delivery"],["done","Delivered"],["cancel","Cancelled"]];
-const STATUS_LBL = Object.fromEntries(STATUS);
-const FILTERS = [["open","Active"],["new","Awaiting payment"],["paid","Payment approved"],["sent","Out for delivery"],["done","Delivered"],["cancel","Cancelled"],["all","All"]];
-let ORDERS = [], ordersSha = null, oFilter = "open", parsed = null, ordersBusy = false;
+/* ---------- menus, dialogs, signed-in account ---------- */
+function closePops() { [["alertPop", "bellBtn"], ["morePop", "moreBtn"]].forEach(([p, b]) => { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false") }) }
+function togglePop(p, b) { const open = $(p).hidden; closePops(); if (open) { $(p).hidden = false; $(b).setAttribute("aria-expanded", "true") } return open }
+$("bellBtn").onclick = e => { e.stopPropagation(); if (togglePop("alertPop", "bellBtn")) renderBell() };
+$("moreBtn").onclick = e => { e.stopPropagation(); togglePop("morePop", "moreBtn") };
+document.addEventListener("click", e => { if (!e.target.closest(".popwrap")) closePops() });
+let modal = null;
+function openModal(id) { closeModal(); closePops(); modal = $(id); $("scrim").hidden = false; modal.hidden = false; const c = modal.querySelector("[data-mclose]"); if (c) c.focus() }
+function closeModal() { if (modal) modal.hidden = true; modal = null; $("scrim").hidden = true }
+$("scrim").onclick = closeModal;
+document.querySelectorAll("[data-mclose]").forEach(b => b.onclick = closeModal);
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); closePops() } });
+let ME = "";
+function renderMe() { const m = ME || "Owner"; $("meMail").textContent = m; $("meMail2").textContent = "Signed in as " + m; $("meAv").textContent = (m.replace(/[^A-Za-z]/g, "")[0] || "G").toUpperCase() }
 
-$("oFilter").innerHTML = FILTERS.map(([k, l]) => `<button class="chip" data-f="${k}" aria-pressed="${k === oFilter}">${l}</button>`).join("");
-$("oFilter").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; oFilter = b.dataset.f;
-  $("oFilter").querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === b)); renderOrders() });
+/* ---------- new order alerts ----------
+   Orders are checked every 20 seconds (every minute while the tab is in the background). An order this device has
+   not seen yet plays a two-note chime, shows a banner and puts the count in the tab title; when the page is not in
+   front, a desktop notification can show too. Browsers allow sound only after the first tap on the page, so the
+   bell shows a dot until then. */
+const BASE_TITLE = document.title, SOUND_KEY = "ga-alert-sound", SEEN_KEY = "ga-seen-orders", POLL_MS = 20e3;
+const SVG_BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>';
+const AC = window.AudioContext || window.webkitAudioContext, ALERTED = new Set();
+let soundOn = store(SOUND_KEY) !== "off", actx = null, SEEN = null, pollT = null;
+function audio() { if (!actx && AC) { try { actx = new AC() } catch (e) { actx = null } } return actx }
+const audioBlocked = () => soundOn && !!AC && (!actx || actx.state !== "running");
+function unlockAudio() { if (!soundOn || (actx && actx.state === "running")) return; const a = audio(); if (a) a.resume().then(() => { renderBell(); renderAlert() }, () => {}) }
+["pointerdown", "keydown", "touchend"].forEach(ev => document.addEventListener(ev, unlockAudio, {capture: true, passive: true}));
+/* A soft two-note bell, played twice (about two seconds). */
+function chime(force) {
+  if (!soundOn && !force) return false;
+  const a = audio(); if (!a || a.state !== "running") return false;
+  const t0 = a.currentTime + .04, out = a.createGain(); out.gain.value = .6; out.connect(a.destination);
+  [[0, 880], [.14, 1318.5], [.66, 880], [.8, 1318.5]].forEach(([d, f]) => [[1, .42, 1.1], [2, .1, .5], [3, .04, .3]].forEach(([h, v, len]) => {
+    const o = a.createOscillator(), g = a.createGain(), st = t0 + d;
+    o.type = "sine"; o.frequency.value = f * h;
+    g.gain.setValueAtTime(.0001, st); g.gain.exponentialRampToValueAtTime(v, st + .015); g.gain.exponentialRampToValueAtTime(.0001, st + len);
+    o.connect(g); g.connect(out); o.start(st); o.stop(st + len + .05);
+  }));
+  return true;
+}
+/* Phones vibrate too, once the page has been tapped (browsers block it before that). */
+function buzz() { try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate([180, 90, 180]) } catch (e) {} }
+function notifyDesktop(list) {
+  if (!("Notification" in window) || Notification.permission !== "granted" || (!document.hidden && document.hasFocus())) return;
+  const o = list[0], title = list.length > 1 ? `${list.length} new orders` : `New order ${o.no}`;
+  const body = list.length > 1 ? list.slice(0, 4).map(x => `${x.no} · ${x.name || "Customer"} · ${rs(x.tot)}`).join("\n") : `${o.name || "Customer"} · ${rs(o.tot)}${o.needTxt ? " · needed by " + o.needTxt : ""}`;
+  try { const n = new Notification(title, {body, icon: "../assets/icon.svg", tag: "ga-new-orders"}); n.onclick = () => { window.focus(); n.close(); viewNew() } } catch (e) {}
+}
+function loadSeen() { try { const a = JSON.parse(localStorage.getItem(SEEN_KEY) || "null"); return Array.isArray(a) ? new Set(a) : null } catch (e) { return null } }
+function saveSeen() { try { localStorage.setItem(SEEN_KEY, JSON.stringify([...SEEN].slice(-800))) } catch (e) {} }
+const unseen = () => SEEN ? ORDERS.filter(o => !SEEN.has(o.no) && ACTIVE.includes(o.status)) : [];
+function markSeen(nos) {
+  if (!SEEN) return; let ch = false;
+  nos.forEach(n => { if (n && !SEEN.has(n)) { SEEN.add(n); ch = true } });
+  if (!ch) return; saveSeen(); renderAlert();
+  nos.forEach(n => { const c = cardEl(n); if (c) { c.classList.remove("is-new"); const t = c.querySelector(".t-new"); if (t) t.remove() } });
+}
+/* Called after every load: the first time on a new device, everything already there counts as seen. */
+function noticeNew() {
+  if (!SEEN) { SEEN = loadSeen(); if (!SEEN) { SEEN = new Set(ORDERS.map(o => o.no)); saveSeen() } }
+  const fresh = unseen().filter(o => !ALERTED.has(o.no));
+  fresh.forEach(o => ALERTED.add(o.no));
+  renderAlert();
+  if (fresh.length) { chime(); buzz(); notifyDesktop(fresh) }
+}
+function renderAlert() {
+  const list = unseen(), n = list.length;
+  document.title = (n ? `(${n}) New order${n > 1 ? "s" : ""} · ` : "") + BASE_TITLE;
+  $("newAlert").hidden = !n; if (!n) return;
+  const o = list[0];
+  $("newAlert").innerHTML = `<span class="na-ic">${SVG_BELL}</span>
+    <div class="na-t"><b>${n > 1 ? n + " new orders" : "New order " + esc(o.no)}</b>
+      <span>${n > 1 ? list.slice(0, 3).map(x => esc(x.no) + " · " + esc(x.name || "Customer")).join("<br>") + (n > 3 ? "<br>…" : "") : `${esc(o.name || "Customer")} · ${rs(o.tot)}${(o.proofs || []).length ? " · payment screenshot attached" : ""}`}</span>
+      ${audioBlocked() ? `<span class="na-snd">Tap anywhere on the page once to allow the alert sound.</span>` : ""}</div>
+    <div class="na-a"><button class="btn em md" type="button" data-na="view">View order${n > 1 ? "s" : ""}</button><button class="x" type="button" data-na="hide" aria-label="Dismiss">×</button></div>`;
+}
+function viewNew() {
+  const list = unseen(); if (!list.length) return;
+  selectTab("orders"); setFilter(list.some(o => o.status === "new") ? "new" : "open");
+  const first = list[0].no; markSeen(list.map(o => o.no));
+  const c = cardEl(first); if (c) { c.scrollIntoView({behavior: "smooth", block: "start"}); c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 1700) }
+}
+$("newAlert").addEventListener("click", e => { const b = e.target.closest("[data-na]"); if (!b) return; if (b.dataset.na === "view") viewNew(); else markSeen(unseen().map(o => o.no)) });
+function renderBell() {
+  const blocked = audioBlocked();
+  $("bellBtn").classList.toggle("muted", !soundOn); $("bellDot").hidden = !blocked;
+  $("alertSound").checked = soundOn; $("alertSoundSt").textContent = soundOn ? "Sound on" : "Sound off";
+  $("soundHint").textContent = !soundOn ? "New orders will not make a sound." : !AC ? "This browser cannot play the alert sound." : blocked ? "Tap anywhere on this page once so the browser allows the sound." : "A chime plays when a new order arrives.";
+  const np = "Notification" in window ? Notification.permission : "unsupported";
+  $("alertNotif").hidden = np === "unsupported"; $("alertNotif").disabled = np !== "default";
+  $("alertNotif").textContent = np === "granted" ? "Notifications are on" : np === "denied" ? "Notifications blocked" : "Turn on notifications";
+}
+$("alertSound").onchange = () => { soundOn = $("alertSound").checked; try { localStorage.setItem(SOUND_KEY, soundOn ? "on" : "off") } catch (e) {} if (soundOn) unlockAudio(); renderBell(); renderAlert() };
+$("alertTest").onclick = () => { const a = audio(); if (!a) { toast("This browser cannot play sounds."); return } a.resume().then(() => { chime(true); renderBell(); renderAlert() }, () => toast("The browser blocked the sound. Tap the page and try again.")) };
+$("alertNotif").onclick = async () => {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") { try { new Notification("Order alerts are on", {body: "A notification appears here when a new order arrives.", icon: "../assets/icon.svg"}) } catch (e) { toast("This browser shows alerts only inside the page. The sound still works.") } }
+    else toast("Notifications are blocked. You can allow them in the browser's site settings.");
+  } catch (e) {}
+  renderBell();
+};
+function setLive(on, why) {
+  $("liveSt").classList.toggle("off", !on); $("liveTxt").textContent = on ? "Live" : "Offline";
+  $("liveSt").title = on ? "Checked for new orders at " + new Date().toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"}) + ". It checks every 20 seconds." : (why || "Orders could not be checked");
+}
+function poll() { clearTimeout(pollT); pollT = setTimeout(async () => { if (TOKEN && ORDERS_OK && !ordersBusy) await loadOrders(); refreshTimes(); poll() }, document.hidden ? 60e3 : POLL_MS) }
+document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN && ORDERS_OK && !$("app").hidden) { loadOrders(); poll() } });
+
+/* =====================================================================
+   ORDERS (private repository: orders.json; payment screenshots in proofs/)
+   With a 50% advance: new (payment to check) → paid (being made) → ready (photo sent, balance asked)
+   → full (paid in full) → sent (rider on the way) → done. With full payment upfront: new → paid → sent → done.
+   ===================================================================== */
+const STATUS = {new: ["Payment to check", "s-new"], paid: ["Being made", "s-paid"], making: ["Being made", "s-paid"], ready: ["Balance due", "s-ready"],
+  full: ["Ready to send", "s-full"], sent: ["Out for delivery", "s-sent"], done: ["Delivered", "s-done"], cancel: ["Cancelled", "s-cancel"]};
+const ACTIVE = ["new", "paid", "making", "ready", "full", "sent"], PROG = ["paid", "making", "ready", "full"];
+const FILTERS = [["open", "Active", o => ACTIVE.includes(o.status)], ["new", "To check", o => o.status === "new"], ["prog", "In progress", o => PROG.includes(o.status)],
+  ["sent", "Out for delivery", o => o.status === "sent"], ["done", "Delivered", o => o.status === "done"], ["cancel", "Cancelled", o => o.status === "cancel"], ["all", "All", () => true]];
+const PROOF_KIND = {advance: "Advance", balance: "Balance", full: "Payment"};
+const SVG_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>';
+const SVG_WA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg>';
+const SVG_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+let ORDERS = [], ordersSha = null, oFilter = "open", parsed = null, ordersBusy = false, ordersLoaded = false, renderPending = false;
+const balanceDue = o => o.rest > 0 && !o.balAt;
+const cardEl = no => $("oList").querySelector(`.ocard[data-no="${CSS.escape(no)}"]`);
+const telHref = p => "tel:" + String(p || "").replace(/[^\d+]/g, "");
+
+$("oFilter").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (b) setFilter(b.dataset.f) });
+document.querySelector(".kpis").addEventListener("click", e => { const k = e.target.closest("[data-kf]"); if (k) setFilter(k.dataset.kf) });
+function setFilter(k) { oFilter = k; $("oSearch").value = ""; renderOrders() }
 $("oSearch").addEventListener("input", () => renderOrders());
 $("oRefresh").onclick = () => loadOrders(true);
-document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN && !$("tab-orders").hidden) loadOrders() });
-/* Website orders arrive on their own; check for new ones every minute while the Orders tab is open. */
-setInterval(() => { if (!document.hidden && TOKEN && !$("tab-orders").hidden && !ordersBusy) loadOrders() }, 60e3);
+$("addOrderBtn").onclick = () => { openModal("pasteModal"); setTimeout(() => $("pasteBox").focus(), 30) };
 
 async function fetchOrders() {
   try {
@@ -210,12 +341,24 @@ async function fetchOrders() {
     return {list: Array.isArray(list) ? list : [], sha: f.sha};
   } catch (e) { if (e.status === 404) return {list: [], sha: null}; throw e }
 }
+const editingList = () => { const a = document.activeElement; return !!(a && $("oList").contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) };
+$("oList").addEventListener("focusout", () => setTimeout(() => { if (renderPending && !editingList()) renderOrders() }, 0));
 async function loadOrders(manual) {
   $("ordersOff").hidden = ORDERS_OK;
-  if (!ORDERS_OK) { $("oList").innerHTML = `<div class="empty-box">Orders cannot be saved until order storage is connected.</div>`; renderStats(); return }
-  if (!ORDERS.length && !ordersSha) $("oList").innerHTML = `<div class="empty-box">Loading orders…</div>`;
-  try { const r = await fetchOrders(); ORDERS = r.list; ordersSha = r.sha; renderOrders(); if (manual) toast("Orders are up to date") }
-  catch (e) { $("oList").innerHTML = `<div class="empty-box">Orders could not load. ${esc(errText(e))}</div>` }
+  if (!ORDERS_OK) { $("oList").innerHTML = `<div class="empty-box"><b>Orders are not connected</b>Orders cannot be saved until order storage is connected.</div>`; renderStats(); setLive(false, "Order storage is not connected"); return }
+  if (!ordersLoaded) $("oList").innerHTML = `<div class="empty-box">Loading orders…</div>`;
+  try {
+    const r = await fetchOrders(); setLive(true);
+    if (!ordersLoaded || r.sha !== ordersSha) {
+      ORDERS = r.list; ordersSha = r.sha; ordersLoaded = true; noticeNew();
+      if (editingList()) renderPending = true; else renderOrders();
+    } else refreshTimes();
+    if (manual) toast("Orders are up to date");
+  } catch (e) {
+    setLive(false, errText(e));
+    if (!ordersLoaded) $("oList").innerHTML = `<div class="empty-box"><b>Orders could not load</b>${esc(errText(e))}</div>`;
+    if (manual) toast(errText(e));
+  }
 }
 /* Applies a change to the latest orders.json and saves it; if another device saved first, reloads and retries once. */
 async function mutateOrders(fn, message) {
@@ -226,7 +369,7 @@ async function mutateOrders(fn, message) {
       const next = fn(ORDERS.map(o => ({...o})));
       try {
         const r = await gh(`${ORD}/contents/orders.json`, {method: "PUT", body: {message, content: b64encUtf8(JSON.stringify(next, null, 1) + "\n"), ...(ordersSha ? {sha: ordersSha} : {})}});
-        ORDERS = next; ordersSha = r.content.sha; renderOrders(); return true;
+        ORDERS = next; ordersSha = r.content.sha; noticeNew(); renderOrders(); return true;
       } catch (e) {
         if ((e.status === 409 || e.status === 422) && attempt === 0) { const r = await fetchOrders(); ORDERS = r.list; ordersSha = r.sha; continue }
         throw e;
@@ -238,16 +381,21 @@ async function mutateOrders(fn, message) {
 }
 /* WhatsApp message telling the customer about their order's current status. */
 function statusText(o, status) {
-  const shop = S.shop.name || "our shop", hi = `Hello ${o.name || ""},`, id = `Order ID: *${o.no}*`;
-  const bal = o.rest ? `Balance to pay on delivery: *${rs(o.rest)}*` : "Your order is fully paid.";
+  const shop = S.shop.name || "our shop", hi = o.name ? `Hello ${o.name},` : "Hello,", id = `Order ID: *${o.no}*`;
+  const accts = payAccounts(S).map(a => `• ${a.k}: ${a.v}${a.who ? ` (${a.who})` : ""}`);
   const T = {
-    paid: [`${hi} we have received your payment${o.adv ? " of " + rs(o.adv) : ""}. Thank you!`, "", `*Your order is confirmed.* ${id}`, bal, "", "We have started making your order by hand and will update you when it is out for delivery."],
-    making: [`${hi} your order is now being made by hand.`, "", id, "We will message you as soon as it is out for delivery."],
+    paid: o.rest > 0
+      ? [`${hi} we have received your advance of *${rs(o.adv)}*. Thank you!`, "", `*Your order is confirmed.* ${id}`, "", "We have started making your order by hand. When it is ready, we will send you a photo of it here.", `The remaining *${rs(o.rest)}* is paid after you have seen the photo, before we send it with the rider.`]
+      : [`${hi} we have received your payment of *${rs(o.adv || o.tot)}*. Thank you!`, "", `*Your order is confirmed and fully paid.* ${id}`, "", "We have started making your order by hand and will message you when it is on its way."],
+    ready: [`${hi} *your order is ready!* We are sending you a photo of it here.`, "", id, "", `Please pay the remaining *${rs(o.rest)}*${accts.length ? " to one of these accounts:" : "."}`, ...accts, "", "Then send the payment screenshot in this chat. We will book your inDrive rider as soon as we receive it."],
+    full: [`${hi} we have received the remaining *${rs(o.rest)}*. Thank you!`, "", id, "Your order is now fully paid. We are booking your inDrive rider and will send you the details shortly."],
     sent: [`${hi} good news! *Your order is ready* and has been handed to our inDrive rider. It is on its way to you.`, "", id,
-      ...(o.rider ? ["", "*Rider details*", `Name: ${o.rider.name}`, `Phone: ${o.rider.phone}`, ...(o.rider.vehicle ? [`Vehicle: ${o.rider.vehicle}`] : []), ""] : []),
-      o.rest ? `Balance due: *${rs(o.rest)}*, plus the inDrive fare for the rider.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.", "Please keep your phone nearby so the rider can reach you.", "", "*Once you receive your order, please reply here to let us know it has reached you safely.*"],
+      ...(o.rider ? ["", "*Rider details*", `Name: ${o.rider.name}`, `Phone: ${o.rider.phone}`, ...(o.rider.vehicle ? [`Vehicle: ${o.rider.vehicle}`] : []), ""] : [""]),
+      balanceDue(o) ? `Remaining to pay: *${rs(o.rest)}*. Please pay it to one of our accounts and send the screenshot here.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.",
+      "Please keep your phone nearby so the rider can reach you.", "", "*Once you receive your order, please reply here to let us know it has reached you safely.*"],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
-    cancel: [`${hi} we are sorry, your order has been *cancelled*.`, "", id, ...(o.cancelReason ? [`Reason: ${o.cancelReason}`] : []), "", "If you have any questions, please reply to this message."]
+    cancel: [`${hi} we are sorry, your order has been *cancelled*.`, "", id, ...(o.cancelReason ? [`Reason: ${o.cancelReason}`] : []), "",
+      ...(PROG.includes(o.prevStatus) || o.prevStatus === "sent" ? ["The payment you made will be refunded to you. We will message you about it shortly.", ""] : []), "If you have any questions, please reply to this message."]
   }[status];
   if (!T) return "";
   return [...T, "", `— ${shop}`].join("\n");
@@ -255,123 +403,237 @@ function statusText(o, status) {
 const statusLink = (o, st) => `https://wa.me/${intl(o.phone)}?text=${encodeURIComponent(statusText(o, st))}`;
 
 function renderStats() {
-  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
-  $("stCount").textContent = ORDERS.filter(o => o.status !== "cancel").length;
-  $("stPending").textContent = ORDERS.filter(o => o.status === "new").length;
-  $("stMonth").textContent = rs(ORDERS.filter(o => { const d = new Date(o.at); return o.status !== "cancel" && d.getMonth() === m && d.getFullYear() === y }).reduce((s, o) => s + (o.tot || 0), 0));
+  const now = new Date(), m = now.getMonth(), y = now.getFullYear(), sum = (l, k) => l.reduce((t, o) => t + (+o[k] || 0), 0);
+  const chk = ORDERS.filter(o => o.status === "new"), prog = ORDERS.filter(o => PROG.includes(o.status)), sent = ORDERS.filter(o => o.status === "sent");
+  const bal = prog.filter(balanceDue), month = ORDERS.filter(o => { const d = new Date(o.at); return o.status !== "cancel" && d.getMonth() === m && d.getFullYear() === y });
+  $("kCheck").textContent = chk.length; $("kCheckS").textContent = chk.length ? rs(chk.reduce((t, o) => t + (o.adv || o.tot || 0), 0)) + " to confirm" : "All payments checked";
+  $("kpiCheck").classList.toggle("hot", chk.length > 0);
+  $("kProg").textContent = prog.length; $("kProgS").textContent = bal.length ? rs(sum(bal, "rest")) + " balance due" : prog.length ? "No balance due" : "Nothing in progress";
+  $("kSent").textContent = sent.length; $("kSentS").textContent = sent.length ? "With inDrive riders" : "None on the road";
+  $("kMonth").textContent = rs(sum(month, "tot")); $("kMonthS").textContent = `${month.length} order${month.length === 1 ? "" : "s"} in ${now.toLocaleDateString("en-GB", {month: "long"})}`;
+  $("navCount").textContent = chk.length; $("navCount").hidden = !chk.length;
 }
-/* Needed today or tomorrow (and not finished yet). */
+function renderFilters() {
+  $("oFilter").innerHTML = FILTERS.map(([k, l, f]) => `<button type="button" data-f="${k}" aria-pressed="${k === oFilter}">${l}<span class="n">${ORDERS.filter(f).length}</span></button>`).join("");
+}
+function ago(t) {
+  const sec = Math.max(0, (Date.now() - t) / 1000);
+  if (sec < 60) return "Just now"; if (sec < 3600) return Math.floor(sec / 60) + " min ago"; if (sec < 86400) return Math.floor(sec / 3600) + " h ago";
+  return new Date(t).toLocaleDateString("en-GB", {day: "numeric", month: "short"});
+}
+const fullTime = t => new Date(t).toLocaleString("en-GB", {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true});
+function refreshTimes() { $("oList").querySelectorAll("time[data-at]").forEach(el => { el.textContent = ago(+el.dataset.at) }) }
+/* Needed today or tomorrow and not on its way yet. */
 function isUrgent(o) {
-  if (!o.need || ["done", "cancel", "sent"].includes(o.status)) return false;
+  if (!o.need || !["new", "paid", "making", "ready", "full"].includes(o.status)) return false;
   const d = new Date(o.need + "T00:00:00"), t = new Date(); t.setHours(0, 0, 0, 0);
   return (d - t) / 864e5 <= 1;
 }
-function renderFilterCounts() {
-  const n = k => ORDERS.filter(o => k === "all" || (k === "open" ? !["done", "cancel"].includes(o.status) : o.status === k)).length;
-  $("oFilter").querySelectorAll("[data-f]").forEach(b => { const k = b.dataset.f; b.textContent = `${FILTERS.find(f => f[0] === k)[1]} (${n(k)})` });
+function stepsHtml(o) {
+  if (o.status === "cancel") return "";
+  const bal = o.rest > 0, names = bal ? ["Payment", "Making", "Balance", "On the way", "Delivered"] : ["Payment", "Making", "On the way", "Delivered"];
+  const at = {new: 0, paid: 1, making: 1, ready: 2, full: bal ? 3 : 2, sent: bal ? 3 : 2, done: names.length}[o.status] ?? 0;
+  return `<ol class="oc-steps" aria-label="Order progress">${names.map((n, i) => `<li class="${i < at ? "done" : i === at ? "cur" : ""}">${n}</li>`).join("")}</ol>`;
 }
-function renderOrders() {
-  renderStats(); renderFilterCounts();
-  ORDERS.sort((a, b) => (b.at || 0) - (a.at || 0));
-  const q = $("oSearch").value.trim().toLowerCase(), qd = q.replace(/\D/g, "");
-  const list = (q ? ORDERS : ORDERS.filter(o => oFilter === "all" || (oFilter === "open" ? !["done", "cancel"].includes(o.status) : o.status === oFilter)))
-    .filter(o => !q || [o.no, o.name, o.phone, o.city].join(" ").toLowerCase().includes(q) || (qd.length >= 4 && String(o.phone).replace(/\D/g, "").includes(qd)));
-  $("oList").innerHTML = list.length ? list.map(o => `<div class="ocard" data-s="${esc(o.status)}">
-    <div class="ohead"><span class="no">${esc(o.no)}${o.source === "website" ? ` <span class="src">Website</span>` : ""}${isUrgent(o) ? ` <span class="src urgent">Urgent</span>` : ""}</span><span class="sub">${new Date(o.at).toLocaleDateString("en-PK", {day: "numeric", month: "short"})}${o.needTxt ? " · needed by " + esc(o.needTxt) : ""}</span></div>
-    <div><b>${esc(o.name || "—")}</b> <span class="sub">· ${esc(o.phone)} · ${esc(o.city)}</span></div>
-    ${o.addr ? `<div class="sub">${o.area ? esc(o.area) + " · " : ""}${esc(o.addr)}</div>` : ""}
-    ${o.items && o.items.length ? `<ul class="oitems">${o.items.map(i => `<li>${esc(i.name)} × ${i.qty}</li>`).join("")}</ul>` : ""}
-    ${o.card ? `<div class="sub">Card: ${esc(o.card)}</div>` : ""}${o.note ? `<div class="sub">Note: ${esc(o.note)}</div>` : ""}
-    <div class="omoney"><span>Total <b>${rs(o.tot)}</b></span>${o.adv ? `<span>Advance <b>${rs(o.adv)}</b></span><span>Balance <b>${rs(o.rest)}</b></span>` : ""}</div>
-    ${o.rider ? `<div class="rider-info">inDrive rider: <b>${esc(o.rider.name)}</b> · <a href="tel:${esc(o.rider.phone)}">${esc(o.rider.phone)}</a>${o.rider.vehicle ? " · " + esc(o.rider.vehicle) : ""}</div>` : ""}
-    ${["paid", "making", "sent"].includes(o.status) && o.phone ? `<details class="rider-box"${o.rider ? "" : " open"}><summary>${o.rider ? "Change rider" : "Assign inDrive rider"}</summary>
-      <div class="three" data-rform="${esc(o.no)}">
-        <label class="fld">Rider name<input data-rf="name" maxlength="40" value="${esc(o.rider ? o.rider.name : "")}" placeholder="Ali Raza"></label>
-        <label class="fld">Rider phone<input data-rf="phone" inputmode="tel" maxlength="20" value="${esc(o.rider ? o.rider.phone : "")}" placeholder="0300 1234567"></label>
-        <label class="fld">Vehicle<input data-rf="vehicle" maxlength="40" value="${esc(o.rider ? o.rider.vehicle : "")}" placeholder="Suzuki Alto · LEB-1234"></label>
-      </div>
-      <button class="btn em" type="button" data-rsave="${esc(o.no)}" style="padding:8px 16px;margin-top:8px">Save and send rider details on WhatsApp</button>
-    </details>` : ""}
-    ${o.status === "new" ? `<div class="banner warn" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>Approve only after you have checked the payment screenshot on WhatsApp.</span><button class="btn em" data-approve="${esc(o.no)}" style="padding:8px 16px">✓ Approve payment</button></div>` : ""}
-    ${o.status === "cancel" ? `<div class="cancel-info">Cancelled${o.cancelReason ? ": " + esc(o.cancelReason) : ""}</div>` : ""}
-    <div class="ofoot">
-      <span class="ostate">${esc(STATUS_LBL[o.status] || o.status)}</span>
-      ${o.phone ? `<a class="sm green" href="https://wa.me/${intl(o.phone)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
-      ${o.status === "sent" ? `<button class="sm" type="button" data-delivered="${esc(o.no)}">✓ Mark delivered</button>` : ""}
-      ${["new", "paid", "making", "sent"].includes(o.status) ? `<button class="sm red" type="button" data-cancelopen="${esc(o.no)}">Cancel order</button>` : ""}
+function hintText(o) {
+  switch (o.status) {
+    case "new": return (o.proofs || []).length ? "Check that the money has arrived in your JazzCash, Easypaisa or bank app before approving. Screenshots can be edited."
+      : o.proofLater ? "The customer will send the payment screenshot on WhatsApp. Add it here when it arrives." : "No payment screenshot yet. Ask the customer on WhatsApp, then add it here.";
+    case "paid": case "making": return balanceDue(o) ? "When it is ready, send the customer a photo in WhatsApp and ask for the balance." : "When it is ready, book an inDrive rider and send the rider's details.";
+    case "ready": return `Waiting for the remaining ${rs(o.rest)}. Check it in your app before confirming.`;
+    case "full": return "Paid in full. Book an inDrive rider and send the rider's details.";
+    case "sent": return "On the way. Mark it delivered when the customer confirms.";
+    case "done": return o.deliveredAt ? "Delivered " + fullTime(o.deliveredAt) + "." : "Delivered.";
+    default: return "";
+  }
+}
+const actBtn = (act, label, main) => main ? `<button class="btn em md" type="button" data-act="${act}">${label}</button>` : `<button class="sm" type="button" data-act="${act}">${label}</button>`;
+function actionsHtml(o) {
+  const A = [];
+  if (ACTIVE.includes(o.status)) A.push(`<button class="link-btn" type="button" data-act="cancel">Cancel order</button>`);
+  if (o.status === "new") A.push(actBtn("approve", `✓ Approve ${o.rest > 0 ? "advance" : "payment"}`, true));
+  else if (o.status === "paid" || o.status === "making") { if (balanceDue(o)) A.push(actBtn("balance", "Balance already paid"), actBtn("ready", "Order ready · ask for balance", true)); else A.push(actBtn("rider", "Assign inDrive rider", true)) }
+  else if (o.status === "ready") A.push(actBtn("remind", "Send reminder"), actBtn("balance", "✓ Balance received", true));
+  else if (o.status === "full") A.push(actBtn("rider", "Assign inDrive rider", true));
+  else if (o.status === "sent") A.push(actBtn("rider", "Change rider"), actBtn("delivered", "✓ Mark delivered", true));
+  return A.join("");
+}
+function payHtml(o) {
+  const live = o.status !== "cancel", approved = !["new", "cancel"].includes(o.status);
+  const tag = (ok, wait) => !live ? "<span></span>" : ok ? `<i class="ok">Received</i>` : `<i class="wait">${wait}</i>`;
+  const rows = [`<div class="pr tot"><span>Total</span><b>${rs(o.tot)}</b><span></span></div>`];
+  if (o.rest > 0) rows.push(`<div class="pr"><span>Advance${o.pct ? ` (${o.pct}%)` : ""}</span><b>${rs(o.adv)}</b>${tag(approved, "To check")}</div>`,
+    `<div class="pr"><span>Balance</span><b>${rs(o.rest)}</b>${tag(!!o.balAt, o.status === "ready" ? "Asked" : "Later")}</div>`);
+  else rows.push(`<div class="pr"><span>${o.adv ? "Paid upfront" : "Payment"}</span><b>${rs(o.adv || o.tot)}</b>${tag(approved, "To check")}</div>`);
+  const pics = (o.proofs || []).map(x => { const k = PROOF_KIND[x.k] || "Payment"; return `<button type="button" class="pf" data-pview="${esc(x.p)}" title="View the ${k.toLowerCase()} screenshot"><img data-proof="${esc(x.p)}" alt="${k} screenshot"><span>${k}</span></button>` }).join("");
+  const kind = o.status === "new" ? (o.rest > 0 ? "advance" : "full") : "balance";
+  const add = (o.status === "new" || (["paid", "making", "ready"].includes(o.status) && balanceDue(o))) ? `<label class="pf add" title="Add a payment screenshot"><input type="file" accept="image/*" data-pfadd="${kind}" aria-label="Add the ${kind} payment screenshot">${SVG_PLUS}<span>${kind === "balance" ? "Balance" : "Add"}</span></label>` : "";
+  const none = !pics && o.status === "new" ? `<span class="pf-none">No screenshot yet</span>` : "";
+  return rows.join("") + (pics || add ? `<div class="proofs" style="align-items:center">${pics}${add}${none}</div>` : "");
+}
+function orderCard(o) {
+  const [lbl, cls] = STATUS[o.status] || [o.status, ""], isNew = !!SEEN && !SEEN.has(o.no) && ACTIVE.includes(o.status), urgent = isUrgent(o), r = o.rider, act = ACTIVE.includes(o.status);
+  const items = (o.items || []).map(i => `<li><span>${esc(i.name)} <span class="q">× ${i.qty}</span></span><span>${rs(i.price * i.qty)}</span></li>`).join("");
+  return `<article class="ocard${isNew ? " is-new" : ""}" data-no="${esc(o.no)}" data-s="${esc(o.status)}">
+  <header class="oc-h"><div class="oc-id"><b class="no">${esc(o.no)}</b>${isNew ? `<span class="tag t-new">New</span>` : ""}<span class="tag">${o.source === "website" ? "Website" : "WhatsApp"}</span>${urgent ? `<span class="tag t-urgent">Urgent</span>` : ""}</div>
+    <div class="oc-meta"><span class="pill ${cls}">${esc(lbl)}</span><time data-at="${+o.at || 0}" title="${esc(fullTime(o.at))}">${ago(o.at)}</time></div></header>
+  ${stepsHtml(o)}
+  <div class="oc-grid">
+    <section class="oc-cust"><span class="lbl">Customer</span><b class="nm">${esc(o.name || "—")}</b>
+      ${o.phone ? `<div class="ct"><a href="${esc(telHref(o.phone))}">${SVG_PHONE}${esc(o.phone)}</a><a class="wa" href="https://wa.me/${intl(o.phone)}" target="_blank" rel="noopener">${SVG_WA}WhatsApp</a></div>` : ""}
+      ${o.addr || o.area ? `<div class="addr">${esc([o.area, o.addr].filter(Boolean).join(" · "))}</div>` : ""}
+      ${o.needTxt ? `<div class="need${urgent ? " urgent" : ""}">Needed by <b>${esc(o.needTxt)}</b></div>` : ""}</section>
+    <section class="oc-items"><span class="lbl">Items</span>${items ? `<ul>${items}</ul>` : `<span class="sub">No items listed</span>`}
+      ${o.card ? `<p class="note">Card: ${esc(o.card)}</p>` : ""}${o.note ? `<p class="note">Note: ${esc(o.note)}</p>` : ""}</section>
+    <section class="oc-pay"><span class="lbl">Payment</span>${payHtml(o)}</section>
+  </div>
+  ${r ? `<div class="oc-note rider-info">inDrive rider <b>${esc(r.name)}</b> · <a href="${esc(telHref(r.phone))}">${esc(r.phone)}</a>${r.vehicle ? " · " + esc(r.vehicle) : ""}</div>` : ""}
+  ${o.status === "cancel" ? `<div class="oc-note cancel-info">Cancelled${o.cancelReason ? ": " + esc(o.cancelReason) : ""}</div>` : ""}
+  ${act || o.status === "done" ? `<footer class="oc-f"><span class="oc-hint">${esc(hintText(o))}</span><div class="oc-acts">${actionsHtml(o)}</div></footer>` : ""}
+  ${act ? `<div class="oc-form" data-form="rider" hidden>
+    <div class="three">
+      <label class="fld">Rider name<input data-rf="name" maxlength="40" value="${esc(r ? r.name : "")}" placeholder="Ali Raza" autocomplete="off"></label>
+      <label class="fld">Rider phone<input data-rf="phone" inputmode="tel" maxlength="20" value="${esc(r ? r.phone : "")}" placeholder="0300 1234567" autocomplete="off"></label>
+      <label class="fld">Vehicle<input data-rf="vehicle" maxlength="40" value="${esc(r ? r.vehicle : "")}" placeholder="Suzuki Alto · LEB-1234" autocomplete="off"></label>
     </div>
-    <div class="cancel-box" data-cbox="${esc(o.no)}" hidden>
-      <label class="fld">Reason for cancelling (sent to the customer)<input data-creason maxlength="160" placeholder="e.g. Payment not received within 24 hours"></label>
-      <div class="ofoot"><button class="btn" type="button" data-cancelgo="${esc(o.no)}" style="background:var(--rose);color:#fff;padding:8px 16px">Cancel order and tell the customer</button><button class="sm" type="button" data-cancelback="${esc(o.no)}">Keep order</button></div>
-    </div></div>`).join("")
-    : `<div class="empty-box">${q ? "No order found for this tracking ID, name or phone number. If the customer ordered on WhatsApp only, add it with the box at the bottom." : ORDERS.length ? "No orders with this status." : "No orders yet. Orders placed on the website appear here automatically."}</div>`;
+    <div class="oc-fa"><button class="btn em md" type="button" data-act="rsave">Save and send on WhatsApp</button><button class="sm" type="button" data-act="close">Close</button></div>
+  </div>
+  <div class="oc-form cancel" data-form="cancel" hidden>
+    <label class="fld">Reason for cancelling (sent to the customer)<input data-creason maxlength="160" placeholder="e.g. We cannot make it by your date" autocomplete="off"></label>
+    <div class="oc-fa"><button class="btn md danger" type="button" data-act="cancelgo">Cancel order and tell the customer</button><button class="sm" type="button" data-act="close">Keep order</button></div>
+  </div>` : ""}
+</article>`;
 }
-$("oList").addEventListener("click", async e => {
-  const rs_ = e.target.closest("[data-rsave]");
-  if (rs_) {
-    const no = rs_.dataset.rsave, box = $("oList").querySelector(`[data-rform="${CSS.escape(no)}"]`);
-    const val = k => box.querySelector(`[data-rf="${k}"]`).value.trim();
-    const rider = {name: val("name"), phone: val("phone"), vehicle: val("vehicle")};
+function emptyHtml(q) {
+  if (q) return `<div class="empty-box"><b>No order found</b>Nothing matches “${esc(q)}”. If the customer ordered on WhatsApp only, use Add order.</div>`;
+  if (!ORDERS.length) return `<div class="empty-box"><b>No orders yet</b>Orders placed on the website appear here on their own, with an alert sound.</div>`;
+  return `<div class="empty-box"><b>Nothing here</b>No orders with this status.</div>`;
+}
+/* Re-draws the list; any rider or cancel form that is open keeps what was typed in it. */
+function renderOrders() {
+  renderPending = false;
+  const keep = {};
+  $("oList").querySelectorAll(".ocard").forEach(c => { const f = [...c.querySelectorAll("[data-form]")].find(x => !x.hidden); if (f) keep[c.dataset.no] = [f.dataset.form, [...f.querySelectorAll("input")].map(i => i.value)] });
+  renderStats(); renderFilters();
+  ORDERS.sort((a, b) => (b.at || 0) - (a.at || 0));
+  const q = $("oSearch").value.trim().toLowerCase(), qd = q.replace(/\D/g, ""), f = (FILTERS.find(x => x[0] === oFilter) || FILTERS[0])[2];
+  const list = (q ? ORDERS : ORDERS.filter(f)).filter(o => !q || [o.no, o.name, o.phone, o.area, o.city].join(" ").toLowerCase().includes(q) || (qd.length >= 4 && String(o.phone).replace(/\D/g, "").includes(qd)));
+  $("oList").innerHTML = list.length ? list.map(orderCard).join("") : emptyHtml(q);
+  for (const [no, [form, vals]] of Object.entries(keep)) {
+    const c = cardEl(no), el = c && c.querySelector(`[data-form="${form}"]`); if (!el) continue;
+    el.hidden = false; el.querySelectorAll("input").forEach((i, n) => { if (vals[n] != null) i.value = vals[n] });
+  }
+  wireThumbs();
+}
+$("oList").addEventListener("click", e => {
+  const card = e.target.closest(".ocard"); if (!card) return;
+  const o = ORDERS.find(x => x.no === card.dataset.no); if (!o) return;
+  markSeen([o.no]);
+  const pv = e.target.closest("[data-pview]"); if (pv) { openProof(o, pv.dataset.pview); return }
+  const b = e.target.closest("[data-act]"); if (b) doAct(b.dataset.act, o, b, card);
+});
+function doAct(act, o, b, card) {
+  const no = o.no, form = k => card && card.querySelector(`[data-form="${k}"]`);
+  if (act === "rider" || act === "cancel") {
+    const f = form(act); if (!f) return; const show = f.hidden;
+    card.querySelectorAll("[data-form]").forEach(x => x.hidden = true); f.hidden = !show;
+    if (show) { f.querySelector("input").focus({preventScroll: true}); f.scrollIntoView({block: "nearest", behavior: "smooth"}) }
+    return;
+  }
+  if (act === "close") { b.closest("[data-form]").hidden = true; return }
+  if (act === "remind") { window.open(statusLink(o, "ready"), "_blank", "noopener"); return }
+  if (act === "approve") return step(b, o, {status: "paid", approvedAt: Date.now()}, "paid", `Order ${no}: ${o.rest > 0 ? "advance" : "payment"} approved`, `${o.rest > 0 ? "Advance" : "Payment"} approved. Send the confirmation in WhatsApp.`);
+  if (act === "ready") return step(b, o, {status: "ready", readyAt: Date.now()}, "ready", `Order ${no}: ready, balance requested`, "Now send the photo of the finished order in the same WhatsApp chat.");
+  if (act === "balance") return step(b, o, {status: "full", balAt: Date.now()}, "full", `Order ${no}: balance received`, "Balance received. Book the inDrive rider next.");
+  if (act === "delivered") return step(b, o, {status: "done", deliveredAt: Date.now()}, null, `Order ${no}: delivered`, "Marked as delivered.");
+  if (act === "rsave") {
+    const f = form("rider"), val = k => f.querySelector(`[data-rf="${k}"]`).value.trim(), rider = {name: val("name"), phone: val("phone"), vehicle: val("vehicle")};
     if (!rider.name || rider.phone.replace(/\D/g, "").length < 10) { toast("Enter the rider's name and a valid phone number."); return }
-    const win = window.open("", "_blank"); rs_.disabled = true;
-    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, rider, status: "sent", sentAt: Date.now()} : o), `Order ${no}: rider ${rider.name}, out for delivery`)) {
-      const ord = ORDERS.find(o => o.no === no);
-      if (win) win.location.href = statusLink(ord, "sent");
-      toast("Rider saved. Send the details to the customer in WhatsApp.");
-    } else { rs_.disabled = false; if (win) win.close() }
-    return;
+    return step(b, o, {rider, status: "sent", sentAt: Date.now()}, "sent", `Order ${no}: rider ${rider.name}, out for delivery`, "Rider saved. Send the details to the customer in WhatsApp.");
   }
-  const ap = e.target.closest("[data-approve]");
-  if (ap) { ap.disabled = true; const no = ap.dataset.approve, ord = ORDERS.find(o => o.no === no);
-    const win = ord && ord.phone ? window.open("", "_blank") : null;
-    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "paid", approvedAt: Date.now()} : o), `Order ${no}: payment approved`)) {
-      if (win) { win.location.href = statusLink(ord, "paid"); toast("Payment approved. Send the confirmation in WhatsApp.") } else toast("Payment approved for " + no);
-    } else { ap.disabled = false; if (win) win.close() }
-    return }
-  const co = e.target.closest("[data-cancelopen]"), cb = e.target.closest("[data-cancelback]"), cg = e.target.closest("[data-cancelgo]"), dl = e.target.closest("[data-delivered]");
-  const cbox = no => $("oList").querySelector(`[data-cbox="${CSS.escape(no)}"]`);
-  if (co) { const b = cbox(co.dataset.cancelopen); b.hidden = false; b.querySelector("[data-creason]").focus(); return }
-  if (cb) { cbox(cb.dataset.cancelback).hidden = true; return }
-  if (cg) {
-    const no = cg.dataset.cancelgo, reason = cbox(no).querySelector("[data-creason]").value.trim(), ord = ORDERS.find(o => o.no === no);
+  if (act === "cancelgo") {
+    const reason = form("cancel").querySelector("[data-creason]").value.trim();
     if (!reason) { toast("Please write the reason for cancelling."); return }
-    const win = ord && ord.phone ? window.open("", "_blank") : null; cg.disabled = true;
-    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "cancel", cancelReason: reason, cancelledAt: Date.now()} : o), `Order ${no}: cancelled (${reason})`)) {
-      if (win) win.location.href = statusLink(ORDERS.find(o => o.no === no), "cancel");
-      toast("Order cancelled. Send the message to the customer in WhatsApp.");
-    } else { cg.disabled = false; if (win) win.close() }
-    return;
+    return step(b, o, {status: "cancel", prevStatus: o.status, cancelReason: reason, cancelledAt: Date.now()}, "cancel", `Order ${no}: cancelled (${reason})`, "Order cancelled. Send the message to the customer in WhatsApp.");
   }
-  if (dl) { const no = dl.dataset.delivered; dl.disabled = true;
-    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, status: "done", deliveredAt: Date.now()} : o), `Order ${no}: delivered`)) toast("Marked as delivered"); else dl.disabled = false; return }
+}
+/* Saves a status change, then opens the customer's WhatsApp chat with the matching message. The tab is opened
+   straight away, inside the click, so the browser does not block it. */
+async function step(b, o, patch, msgKey, commitMsg, done) {
+  const win = msgKey && o.phone ? window.open("", "_blank") : null; if (b) b.disabled = true;
+  if (await mutateOrders(list => list.map(x => x.no === o.no ? {...x, ...patch} : x), commitMsg)) {
+    const ord = ORDERS.find(x => x.no === o.no);
+    if (win && ord) win.location.href = statusLink(ord, msgKey);
+    toast(done);
+  } else { if (b) b.disabled = false; if (win) win.close() }
+}
+
+/* ---------- payment screenshots (private repository, proofs/) ---------- */
+const PROOF_URL = new Map();
+function proofUrl(path) {
+  if (!PROOF_URL.has(path)) PROOF_URL.set(path, gh(`${ORD}/contents/${path.split("/").map(encodeURIComponent).join("/")}`, {blob: true})
+    .then(buf => URL.createObjectURL(new Blob([buf], {type: /\.png$/i.test(path) ? "image/png" : "image/jpeg"})))
+    .catch(e => { PROOF_URL.delete(path); throw e }));
+  return PROOF_URL.get(path);
+}
+const thumbIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { thumbIO.unobserve(en.target); loadThumb(en.target) } }), {rootMargin: "300px"}) : null;
+function loadThumb(img) { proofUrl(img.dataset.proof).then(u => { img.src = u }).catch(() => { const b = img.closest(".pf"); if (b) b.classList.add("broken") }) }
+function wireThumbs() { if (thumbIO) thumbIO.disconnect(); $("oList").querySelectorAll("img[data-proof]").forEach(img => thumbIO ? thumbIO.observe(img) : loadThumb(img)) }
+function openProof(o, path) {
+  const x = (o.proofs || []).find(y => y.p === path) || {}, kind = PROOF_KIND[x.k] || "Payment";
+  $("lbTitle").textContent = kind + " screenshot";
+  $("lbSub").textContent = `${o.no} · ${o.name || "Customer"} · ${x.k === "balance" ? "balance " + rs(o.rest) : o.rest > 0 ? "advance " + rs(o.adv) : rs(o.adv || o.tot)}`;
+  const img = $("lbImg"); img.removeAttribute("src"); img.alt = "Loading the screenshot…";
+  const can = o.status === "new" ? ["approve", `✓ Approve ${o.rest > 0 ? "advance" : "payment"}`] : o.status === "ready" && x.k === "balance" ? ["balance", "✓ Balance received"] : null;
+  $("lbFoot").innerHTML = can ? `<p class="hint">Before you approve, check that this payment has arrived in your JazzCash, Easypaisa or bank app. A screenshot on its own is not proof.</p><button class="btn em md" type="button" data-lbact="${can[0]}" data-no="${esc(o.no)}">${can[1]}</button>` : "";
+  openModal("lightbox");
+  proofUrl(path).then(u => { if (!$("lightbox").hidden) { img.src = u; img.alt = kind + " screenshot" } }).catch(e => { img.alt = "The screenshot could not load. " + errText(e) });
+}
+$("lbFoot").addEventListener("click", e => { const b = e.target.closest("[data-lbact]"); if (!b) return; const o = ORDERS.find(x => x.no === b.dataset.no); if (!o) return; doAct(b.dataset.lbact, o, b, cardEl(o.no)); closeModal() });
+/* The owner can add a screenshot the customer sent on WhatsApp (an order taken on WhatsApp, or the balance). */
+$("oList").addEventListener("change", async e => {
+  const inp = e.target.closest("[data-pfadd]"); if (!inp || !inp.files[0]) return;
+  const no = inp.closest(".ocard").dataset.no, kind = inp.dataset.pfadd, file = inp.files[0]; inp.value = "";
+  if (ordersBusy) { toast("Saving the previous change. Please wait."); return }
+  toast("Uploading the screenshot…");
+  try {
+    const blob = await toJpeg(file, 1600, .82), path = `proofs/${no}-${kind[0]}${randId(5)}.jpg`;
+    await gh(`${ORD}/contents/${path}`, {method: "PUT", body: {message: `Order ${no}: ${kind} payment screenshot`, content: await blobB64(blob)}});
+    PROOF_URL.set(path, Promise.resolve(URL.createObjectURL(blob)));
+    if (await mutateOrders(list => list.map(o => o.no === no ? {...o, proofs: [...(o.proofs || []), {p: path, k: kind, at: Date.now()}]} : o), `Order ${no}: ${kind} screenshot added`)) toast("Screenshot added");
+  } catch (err) { toast(err && err.status != null ? errText(err) : "Could not use this file. Please choose a JPG or PNG screenshot.") }
 });
 
+/* ---------- orders that came only on WhatsApp ---------- */
 /* Reads a WhatsApp order message (the format the storefront sends) back into fields. */
 function parseOrder(raw) {
   const t = raw.replace(/\*/g, "").replace(/\r/g, "");
   const g = re => { const m = t.match(re); return m ? m[1].trim() : "" };
   const items = []; t.split("\n").forEach(l => { const m = l.match(/^\s*[•\-]\s*(.+?)\s+[x×]\s*(\d+)\s*(?:=|—|–|-)\s*Rs\.?\s*([\d,]+)/i); if (m) { const q = +m[2]; items.push({name: m[1].trim(), qty: q, price: Math.round(num(m[3]) / q)}) } });
   const o = {no: g(/(?:Order ID|Tracking ID|Order)\s*[—–\-:#*]*\s*\*?([A-Z]{1,4}-(?:\d{4}-\d{2,5}|\d{6}-[0-9A-Z]{4}))/i).toUpperCase(), items,
-    del: num(g(/(?:^|\n)\s*Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/(?:Advance[^:\n]*|Paying in full now):\s*Rs\.?\s*([\d,]+)/i)),
+    del: num(g(/(?:^|\n)\s*Delivery:\s*Rs\.?\s*([\d,]+)/i)), tot: num(g(/(?:^|\n)\s*Total:\s*Rs\.?\s*([\d,]+)/i)), adv: num(g(/(?:Advance[^:\n]*|Paying in full now|Paid in full|Full payment):\s*Rs\.?\s*([\d,]+)/i)),
+    pct: num(g(/Advance[^(\n]*\((\d{1,3})%\)/i)),
     name: g(/(?:Naam|Name):\s*(.+)/i), phone: g(/Phone:\s*(.+)/i), city: g(/City:\s*(.+)/i), addr: g(/Address:\s*(.+)/i), area: g(/Area:\s*(.+)/i),
     needTxt: g(/(?:Kab chahiye|Needed by):\s*(.+)/i), need: (() => { const m = g(/Needed by:\s*(\d{1,2} \w{3} \d{4})/i); const d = m ? new Date(m) : null; return d && !isNaN(d) ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "" })(), card: g(/Card(?: message)?:\s*(.+)/i), note: g(/Note:\s*(.+)/i)};
-  if (!o.tot && items.length) o.tot = items.reduce((s, i) => s + i.price * i.qty, 0) + o.del;
+  if (!o.tot && items.length) o.tot = items.reduce((sum, i) => sum + i.price * i.qty, 0) + o.del;
   if (!o.no) o.no = makeOrderNo(S.shop.name);
   o.rest = Math.max(0, o.tot - o.adv);
+  if (!o.pct && o.adv) o.pct = o.rest ? Math.round(o.adv / o.tot * 100) : 100;
   return (o.name || o.phone || items.length) ? o : null;
 }
 $("pasteRead").onclick = () => {
   parsed = parseOrder($("pasteBox").value);
   if (!parsed) { $("pastePreview").innerHTML = `<p class="msg err" style="text-align:left">No order was found in this message. Paste the customer's full order message.</p>`; $("pasteSave").disabled = true; return }
   const dup = ORDERS.some(o => o.no === parsed.no);
-  $("pastePreview").innerHTML = `<div class="preview"><b>${esc(parsed.no)}</b> · ${esc(parsed.name)} · ${esc(parsed.phone)}<br>${parsed.items.map(i => esc(i.name) + " × " + i.qty).join(", ") || "No items found"}<br>Total ${rs(parsed.tot)}${parsed.adv ? ` · Advance ${rs(parsed.adv)}` : ""}${dup ? `<br><b style="color:var(--rose)">This order is already saved. Saving again will replace it.</b>` : ""}</div>`;
+  $("pastePreview").innerHTML = `<div class="preview"><b>${esc(parsed.no)}</b> · ${esc(parsed.name)} · ${esc(parsed.phone)}<br>${parsed.items.map(i => esc(i.name) + " × " + i.qty).join(", ") || "No items found"}<br>Total ${rs(parsed.tot)}${parsed.adv ? ` · ${parsed.rest ? "Advance" : "Paid"} ${rs(parsed.adv)}` : ""}${dup ? `<br><b style="color:var(--rose)">This order is already saved. Saving again will replace it.</b>` : ""}</div>`;
   $("pasteSave").disabled = !ORDERS_OK;
 };
 $("pasteSave").onclick = async () => {
   if (!parsed || !ORDERS_OK) return; $("pasteSave").disabled = true;
   const o = {...parsed, status: parsed.adv ? "new" : "paid", at: Date.now()};
+  markSeen([o.no]);
   if (await mutateOrders(list => [o, ...list.filter(x => x.no !== o.no)], `Add order ${o.no}`)) {
-    $("pasteBox").value = ""; $("pastePreview").innerHTML = ""; parsed = null; toast("Order " + o.no + " saved");
+    $("pasteBox").value = ""; $("pastePreview").innerHTML = ""; parsed = null; closeModal(); setFilter("open"); toast("Order " + o.no + " saved");
   } else $("pasteSave").disabled = false;
 };
 
@@ -465,6 +727,8 @@ $("pOcc").innerHTML = OCCS.map(([k, l]) => `<label class="toggle" for="po_${k}">
 function warns() {
   const r = S.reg || {}; $("regWarn").hidden = !!(r.business || r.regNo || r.ntn);
   $("payWarn").hidden = !(+S.shop.advancePct) || payAccounts(S).length > 0;
+  const noTitle = [...new Set((S.pay.accounts || []).filter(a => a && a.active !== false && String(a.number || "").trim() && !String(a.title || "").trim()).map(a => a.method || "a payment method"))];
+  $("titleWarn").hidden = !noTitle.length; $("titleWarnList").textContent = noTitle.join(" and ");
   $("exampleNote").hidden = !S.products.some(p => p.sample || (!p.photo && p.art));
   $("shopName").innerHTML = wordmark(S.shop.name);
 }

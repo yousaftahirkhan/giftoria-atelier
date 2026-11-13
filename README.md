@@ -7,24 +7,31 @@ The site has two separate parts:
 | Part | Address | Who uses it |
 |---|---|---|
 | Storefront | https://giftoria-atelier.pages.dev/ (also `/` on GitHub Pages) | Customers browse products, fill the cart and place the order on WhatsApp. |
-| Super admin | https://yousaftahirkhan.github.io/giftoria-atelier/admin/ | The owner manages orders, products, homepage, business details and payments. |
+| Super admin | https://giftoria-atelier.pages.dev/admin/ | The owner manages orders, products, homepage, business details and payments. |
 
 The pages.dev address is a Cloudflare Pages project (`site-proxy/`) that forwards every request to GitHub Pages, so anything
-published from the super admin appears there at once. It sends `/admin` to the GitHub Pages address, where the sign-in lives.
+published from the super admin appears there at once. The old github.io addresses forward to pages.dev.
 To redeploy it: `cd site-proxy && npx wrangler pages deploy public --project-name giftoria-atelier --branch main`.
 
 ## How it works
 
 - **Shop content** lives in `data/shop.json` and product photos in `images/`. The storefront reads these files; it cannot change them.
 - **The super admin** signs in with Google plus an authenticator code (see below). Selecting *Publish changes* saves one commit to this repository, and the website updates within about a minute.
-- **Website orders** are sent by the storefront to the order service (`auth-worker/`, `POST /order`), which saves them for the super admin.
-- **Orders** are saved in `orders.json` in the separate private repository `giftoria-orders`, so customer names, phone numbers and addresses are never public.
+- **Website orders** are sent by the storefront to the order service (`auth-worker/`): `POST /proof` stores the customer's payment screenshot and `POST /order` stores the order.
+- **Orders and payment screenshots** are saved in the separate private repository `giftoria-orders` (`orders.json` and `proofs/`), so customer details and payments are never public.
+- **New order alerts:** while the super admin is open it checks for orders every 20 seconds, plays a chime and shows a banner for each new one.
 
 ## Order flow
 
-1. The customer adds items to the cart, enters delivery details and selects *Place order on WhatsApp*.
-2. WhatsApp opens with the order message ready to send to the shop's number.
-3. In the super admin, the owner pastes that message under *Orders → Add an order from WhatsApp*, then tracks it from *Awaiting payment* to *Delivered*.
+The shop takes a 50% advance by default (Payments → Advance payment; it can be switched to 100% upfront).
+
+1. The customer fills the cart and delivery details, pays the advance to one of the active payment methods and uploads the payment screenshot at checkout.
+2. *Place order on WhatsApp* saves the order and opens WhatsApp with the order message ready to send.
+3. In the super admin the order chimes in as *Payment to check*. The owner checks the money in their own app, then selects *Approve advance*; WhatsApp opens with the confirmation.
+4. When the order is made, *Order ready · ask for balance* opens WhatsApp with the remaining amount and the accounts; the owner sends a photo of the finished order in the same chat.
+5. *Balance received*, then *Assign inDrive rider* (rider details go to the customer on WhatsApp), then *Mark delivered*.
+
+Orders that come only on WhatsApp can be added with *Orders → Add order* by pasting the customer's message.
 
 ## Signing in to the super admin
 

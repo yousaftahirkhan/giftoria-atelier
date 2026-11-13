@@ -305,8 +305,57 @@ header.top .logo b{font-size:34px}
 footer{--logo-leaf:#A9C9B4}
 footer .logo b{font-size:32px;color:var(--bg)}
 @media (max-width:460px){header.top .logo b{font-size:29px}header.top .logo b .w2{font-size:8px;letter-spacing:.5em;margin-top:5px}.logo svg{width:30px;height:34px}}
-.paybox{background:var(--blush);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.paybox .pb-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.paybox .pb-head b{font-size:15px;color:var(--ink)}
-.paybox .pb-head span{font-family:var(--display);font-size:20px;color:var(--rose);font-variant-numeric:tabular-nums}
+/* checkout: payment amount, accounts, screenshot upload and our promises */
+.paybox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;margin-top:4px;box-shadow:0 1px 2px rgba(38,30,33,.04)}
+.paybox .pb-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.paybox .pb-head b{font-size:16px;color:var(--ink)}
+.paybox .pb-head span{font-family:var(--display);font-size:22px;color:var(--rose);font-variant-numeric:tabular-nums;white-space:nowrap}
+.paybox .note b{color:var(--ink)}
+.note.small{font-size:12.5px}
 .cp-accts{display:flex;flex-direction:column;gap:6px}
+.acct .sub b{color:var(--ink)}
+.vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.proof-pick{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;text-align:left;border:1.5px dashed var(--rose);background:var(--blush);color:var(--ink);border-radius:14px;padding:12px 14px}
+.proof-pick svg{flex:none;color:var(--rose)}
+.proof-pick b{display:block;font-size:15px}
+.proof-pick small,.proof-row small{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
+.proof-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--bg)}
+.proof-row img,.proof-row .ph{width:48px;height:60px;border-radius:8px;object-fit:cover;object-position:top;background:var(--blush);display:grid;place-items:center;color:var(--rose)}
+.proof-row .pr-t{min-width:0}
+.proof-row.done{border-color:#BFDCCB;background:#F1F8F4}
+.proof-row.done b{color:#1D6F4A}
+.proof-row.error{border-color:var(--rose)}
+.proof-row.error b{color:var(--rose)}
+.proof-row .sm{min-height:40px}
+.proof-skip{font-size:13px;text-align:left;margin-top:8px;padding:6px 0}
+.spin{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--line);border-top-color:var(--rose);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.assure{list-style:none;margin:0;padding:10px 0 0;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:6px}
+.assure li{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted);line-height:1.45}
+.assure svg{flex:none;color:var(--stem);margin-top:1px}
+.totals .rest{color:var(--muted);font-size:14px}
+/* order placed: confirmation, receipt and next steps */
+.placed{display:flex;gap:12px;align-items:center;background:#F1F8F4;border:1px solid #BFDCCB;border-radius:16px;padding:14px}
+.placed .tick{flex:none;width:42px;height:42px;border-radius:50%;background:#1D6F4A;color:#FFFFFF;display:grid;place-items:center}
+.placed>div>b{display:block;font-size:16px}
+.placed>div>span{display:block;font-size:13.5px;color:var(--muted)}
+.placed>div>span b{color:var(--ink)}
+.next{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.next h3{font-family:var(--body);font-weight:800;font-size:15px;margin-bottom:12px}
+.next ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;counter-reset:n}
+.next li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:1px 10px;counter-increment:n}
+.next li::before{content:counter(n);grid-row:span 2;width:28px;height:28px;border-radius:50%;background:var(--blush);color:var(--rose);font-weight:800;font-size:14px;display:grid;place-items:center}
+.next li b{font-size:14.5px;line-height:1.3}
+.next li span{font-size:13px;color:var(--muted);line-height:1.45}
+/* details step: only the total and the amount due stay pinned, so the form has room on phones */
+.totals.compact .r:not(.grand):not(.adv){display:none}
+.totals.compact .grand{font-size:19px}
+/* phones: every control is at least 40px tall, so it is easy to tap (dots keep a small look with a larger hit area) */
+.rail button{min-height:40px}
+.sec-head .link{min-height:40px;display:inline-flex;align-items:center}
+.qty{gap:4px}
+.qty button{width:36px;height:36px}
+.drawer .sm,.myo .sm,.cbox .sm{min-height:40px}
+.social a{min-height:40px;display:inline-flex;align-items:center}
+.dots>button{position:relative}
+.dots>button::after{content:"";position:absolute;inset:-15px -6px}

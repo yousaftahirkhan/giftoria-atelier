@@ -74,3 +74,24 @@ test("GitHub App JWT is signed with the app key and lasts under 10 minutes", asy
   assert.equal(c.iss, "Iv23test");
   assert.ok(c.exp - c.iat <= 600);
 });
+
+test("payment screenshots: recent order IDs and real JPEG or PNG data only", async () => {
+  const {recentOrderNo, imageKind, randomId} = await import("../src/lib.js");
+  const now = Date.UTC(2026, 10, 13, 12);
+  assert.ok(recentOrderNo("GA-261113-K7Q4", now));
+  assert.ok(recentOrderNo("GA-261111-K7Q4", now), "two days old");
+  assert.ok(recentOrderNo("GA-261114-K7Q4", now), "next day (time zones)");
+  assert.ok(!recentOrderNo("GA-261101-K7Q4", now), "too old");
+  assert.ok(!recentOrderNo("GA-261120-K7Q4", now), "future");
+  assert.ok(!recentOrderNo("GA-1112-391", now), "old format");
+  assert.ok(!recentOrderNo("GA-261113-K7Q4/../x", now));
+  assert.ok(!recentOrderNo("", now));
+  const b64 = bytes => btoa(String.fromCharCode(...bytes));
+  assert.equal(imageKind(b64([0xFF, 0xD8, 0xFF, 0xE0, ...new Array(20).fill(1)])), "jpg");
+  assert.equal(imageKind(b64([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, ...new Array(20).fill(0)])), "png");
+  assert.equal(imageKind(b64([...enc.encode("<html><script>alert(1)</script>")])), "");
+  assert.equal(imageKind("not base64 at all!!"), "");
+  assert.equal(imageKind(""), "");
+  assert.match(randomId(6), /^[a-z2-9]{6}$/);
+  assert.notEqual(randomId(6), randomId(6));
+});
