@@ -346,7 +346,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && TO
 const STATUS = {new: ["Payment to check", "s-new"], paid: ["Being made", "s-paid"], making: ["Being made", "s-paid"], ready: ["Balance due", "s-ready"],
   full: ["Ready to send", "s-full"], sent: ["Out for delivery", "s-sent"], done: ["Delivered", "s-done"], cancel: ["Cancelled", "s-cancel"]};
 const ACTIVE = ["new", "paid", "making", "ready", "full", "sent"], PROG = ["paid", "making", "ready", "full"];
-const FILTERS = [["open", "Active", o => ACTIVE.includes(o.status)], ["new", "To check", o => o.status === "new"], ["prog", "In progress", o => PROG.includes(o.status)],
+const FILTERS = [["open", "Active", o => ACTIVE.includes(o.status) || refundDue(o)], ["new", "To check", o => o.status === "new"], ["prog", "In progress", o => PROG.includes(o.status)],
   ["sent", "Out for delivery", o => o.status === "sent"], ["done", "Delivered", o => o.status === "done"], ["cancel", "Cancelled", o => o.status === "cancel"], ["all", "All", () => true]];
 const PROOF_KIND = {advance: "Advance", balance: "Balance", full: "Payment"};
 const SVG_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-3 2a11 11 0 0 0 5 5l2-3 5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>';
@@ -354,6 +354,10 @@ const SVG_WA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
 const SVG_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 let ORDERS = [], ordersSha = null, oFilter = "open", parsed = null, ordersBusy = false, ordersLoaded = false, renderPending = false;
 const balanceDue = o => o.rest > 0 && !o.balAt;
+/* What the customer has paid so far (the advance, or everything once the balance is in). Customers pay the advance
+   before placing the order, so an order still waiting for the check can already have money attached. */
+const paidSoFar = o => o.balAt ? (o.tot || 0) : (o.adv || 0);
+const refundDue = o => o.status === "cancel" && o.refund > 0 && !o.refundAt;
 const cardEl = no => $("oList").querySelector(`.ocard[data-no="${CSS.escape(no)}"]`);
 const telHref = p => "tel:" + String(p || "").replace(/[^\d+]/g, "");
 
@@ -426,7 +430,9 @@ function statusText(o, status) {
       "Please keep your phone nearby so the rider can reach you.", "", "*Once you receive your order, please reply here to let us know it has reached you safely.*"],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
     cancel: [`${hi} we are sorry, your order has been *cancelled*.`, "", id, ...(o.cancelReason ? [`Reason: ${o.cancelReason}`] : []), "",
-      ...(PROG.includes(o.prevStatus) || o.prevStatus === "sent" ? ["The payment you made will be refunded to you. We will message you about it shortly.", ""] : []), "If you have any questions, please reply to this message."]
+      ...(o.refund > 0 ? [`*We will refund your payment of ${rs(o.refund)} within 24 hours* to the account you paid from. If you would like it sent to a different account, please reply with the details.`, ""] : []),
+      "If you have any questions, please reply to this message."],
+    refunded: [`${hi} we have refunded *${rs(o.refund)}* for your cancelled order. Please check your account.`, "", id, "", "We are sorry this order did not work out, and we would be glad to make something for you another time."]
   }[status];
   if (!T) return "";
   return [...T, "", `— ${shop}`].join("\n");
@@ -437,12 +443,14 @@ function renderStats() {
   const now = new Date(), m = now.getMonth(), y = now.getFullYear(), sum = (l, k) => l.reduce((t, o) => t + (+o[k] || 0), 0);
   const chk = ORDERS.filter(o => o.status === "new"), prog = ORDERS.filter(o => PROG.includes(o.status)), sent = ORDERS.filter(o => o.status === "sent");
   const bal = prog.filter(balanceDue), month = ORDERS.filter(o => { const d = new Date(o.at); return o.status !== "cancel" && d.getMonth() === m && d.getFullYear() === y });
-  $("kCheck").textContent = chk.length; $("kCheckS").textContent = chk.length ? rs(chk.reduce((t, o) => t + (o.adv || o.tot || 0), 0)) + " to confirm" : "All payments checked";
-  $("kpiCheck").classList.toggle("hot", chk.length > 0);
+  const refunds = ORDERS.filter(refundDue), rfTxt = refunds.length ? `${refunds.length} refund${refunds.length > 1 ? "s" : ""} due` : "";
+  $("kCheck").textContent = chk.length;
+  $("kCheckS").textContent = chk.length ? rs(chk.reduce((t, o) => t + (o.adv || o.tot || 0), 0)) + " to confirm" + (rfTxt ? " · " + rfTxt : "") : rfTxt || "All payments checked";
+  $("kpiCheck").classList.toggle("hot", chk.length + refunds.length > 0);
   $("kProg").textContent = prog.length; $("kProgS").textContent = bal.length ? rs(sum(bal, "rest")) + " balance due" : prog.length ? "No balance due" : "Nothing in progress";
   $("kSent").textContent = sent.length; $("kSentS").textContent = sent.length ? "With inDrive riders" : "None on the road";
   $("kMonth").textContent = rs(sum(month, "tot")); $("kMonthS").textContent = `${month.length} order${month.length === 1 ? "" : "s"} in ${now.toLocaleDateString("en-GB", {month: "long"})}`;
-  $("navCount").textContent = chk.length; $("navCount").hidden = !chk.length;
+  $("navCount").textContent = chk.length + refunds.length; $("navCount").hidden = !(chk.length + refunds.length);
 }
 function renderFilters() {
   $("oFilter").innerHTML = FILTERS.map(([k, l, f]) => `<button type="button" data-f="${k}" aria-pressed="${k === oFilter}">${l}<span class="n">${ORDERS.filter(f).length}</span></button>`).join("");
@@ -475,6 +483,7 @@ function hintText(o) {
     case "full": return "Paid in full. Book an inDrive rider and send the rider's details.";
     case "sent": return "On the way. Mark it delivered when the customer confirms.";
     case "done": return o.deliveredAt ? "Delivered " + fullTime(o.deliveredAt) + "." : "Delivered.";
+    case "cancel": return refundDue(o) ? `Send ${rs(o.refund)} back to the customer from your JazzCash, Easypaisa or bank app, then confirm it here.` : "";
     default: return "";
   }
 }
@@ -487,6 +496,7 @@ function actionsHtml(o) {
   else if (o.status === "ready") A.push(actBtn("remind", "Send reminder"), actBtn("balance", "✓ Balance received", true));
   else if (o.status === "full") A.push(actBtn("rider", "Assign inDrive rider", true));
   else if (o.status === "sent") A.push(actBtn("rider", "Change rider"), actBtn("delivered", "✓ Mark delivered", true));
+  else if (refundDue(o)) A.push(actBtn("refunded", "✓ Refund sent", true));
   return A.join("");
 }
 function payHtml(o) {
@@ -496,6 +506,7 @@ function payHtml(o) {
   if (o.rest > 0) rows.push(`<div class="pr"><span>Advance${o.pct ? ` (${o.pct}%)` : ""}</span><b>${rs(o.adv)}</b>${tag(approved, "To check")}</div>`,
     `<div class="pr"><span>Balance</span><b>${rs(o.rest)}</b>${tag(!!o.balAt, o.status === "ready" ? "Asked" : "Later")}</div>`);
   else rows.push(`<div class="pr"><span>${o.adv ? "Paid upfront" : "Payment"}</span><b>${rs(o.adv || o.tot)}</b>${tag(approved, "To check")}</div>`);
+  if (o.refund > 0) rows.push(`<div class="pr"><span>Refund</span><b>${rs(o.refund)}</b>${o.refundAt ? `<i class="ok">Sent</i>` : `<i class="wait">Due</i>`}</div>`);
   const pics = (o.proofs || []).map(x => { const k = PROOF_KIND[x.k] || "Payment"; return `<button type="button" class="pf" data-pview="${esc(x.p)}" title="View the ${k.toLowerCase()} screenshot"><img data-proof="${esc(x.p)}" alt="${k} screenshot"><span>${k}</span></button>` }).join("");
   const kind = o.status === "new" ? (o.rest > 0 ? "advance" : "full") : "balance";
   const add = (o.status === "new" || (["paid", "making", "ready"].includes(o.status) && balanceDue(o))) ? `<label class="pf add" title="Add a payment screenshot"><input type="file" accept="image/*" data-pfadd="${kind}" aria-label="Add the ${kind} payment screenshot">${SVG_PLUS}<span>${kind === "balance" ? "Balance" : "Add"}</span></label>` : "";
@@ -503,7 +514,7 @@ function payHtml(o) {
   return rows.join("") + (pics || add ? `<div class="proofs" style="align-items:center">${pics}${add}${none}</div>` : "");
 }
 function orderCard(o) {
-  const [lbl, cls] = STATUS[o.status] || [o.status, ""], isNew = !!SEEN && !SEEN.has(o.no) && ACTIVE.includes(o.status), urgent = isUrgent(o), r = o.rider, act = ACTIVE.includes(o.status);
+  const [lbl, cls] = refundDue(o) ? ["Refund due", "s-ready"] : STATUS[o.status] || [o.status, ""], isNew = !!SEEN && !SEEN.has(o.no) && ACTIVE.includes(o.status), urgent = isUrgent(o), r = o.rider, act = ACTIVE.includes(o.status);
   const items = (o.items || []).map(i => `<li><span>${esc(i.name)} <span class="q">× ${i.qty}</span></span><span>${rs(i.price * i.qty)}</span></li>`).join("");
   return `<article class="ocard${isNew ? " is-new" : ""}" data-no="${esc(o.no)}" data-s="${esc(o.status)}">
   <header class="oc-h"><div class="oc-id"><b class="no">${esc(o.no)}</b>${isNew ? `<span class="tag t-new">New</span>` : ""}<span class="tag">${o.source === "website" ? "Website" : "WhatsApp"}</span>${urgent ? `<span class="tag t-urgent">Urgent</span>` : ""}</div>
@@ -519,8 +530,8 @@ function orderCard(o) {
     <section class="oc-pay"><span class="lbl">Payment</span>${payHtml(o)}</section>
   </div>
   ${r ? `<div class="oc-note rider-info">inDrive rider <b>${esc(r.name)}</b> · <a href="${esc(telHref(r.phone))}">${esc(r.phone)}</a>${r.vehicle ? " · " + esc(r.vehicle) : ""}</div>` : ""}
-  ${o.status === "cancel" ? `<div class="oc-note cancel-info">Cancelled${o.cancelReason ? ": " + esc(o.cancelReason) : ""}</div>` : ""}
-  ${act || o.status === "done" ? `<footer class="oc-f"><span class="oc-hint">${esc(hintText(o))}</span><div class="oc-acts">${actionsHtml(o)}</div></footer>` : ""}
+  ${o.status === "cancel" ? `<div class="oc-note cancel-info">Cancelled${o.cancelReason ? ": " + esc(o.cancelReason) : ""}${o.refund > 0 ? (o.refundAt ? ` · ${rs(o.refund)} refunded on ${esc(fullTime(o.refundAt))}` : ` · refund of ${rs(o.refund)} to send`) : ""}</div>` : ""}
+  ${act || o.status === "done" || refundDue(o) ? `<footer class="oc-f"><span class="oc-hint">${esc(hintText(o))}</span><div class="oc-acts">${actionsHtml(o)}</div></footer>` : ""}
   ${act ? `<div class="oc-form" data-form="rider" hidden>
     <div class="three">
       <label class="fld">Rider name<input data-rf="name" maxlength="40" value="${esc(r ? r.name : "")}" placeholder="Ali Raza" autocomplete="off"></label>
@@ -531,6 +542,8 @@ function orderCard(o) {
   </div>
   <div class="oc-form cancel" data-form="cancel" hidden>
     <label class="fld">Reason for cancelling (sent to the customer)<input data-creason maxlength="160" placeholder="e.g. We cannot make it by your date" autocomplete="off"></label>
+    ${o.adv > 0 ? `<label class="toggle"><input type="checkbox" data-crefund${o.status !== "new" || (o.proofs || []).length ? " checked" : ""}> Refund the ${rs(paidSoFar(o))} they paid</label>
+    <p class="hint">Untick this if the money never reached your account, for example when a screenshot turns out to be fake.</p>` : ""}
     <div class="oc-fa"><button class="btn md danger" type="button" data-act="cancelgo">Cancel order and tell the customer</button><button class="sm" type="button" data-act="close">Keep order</button></div>
   </div>` : ""}
 </article>`;
@@ -544,7 +557,7 @@ function emptyHtml(q) {
 function renderOrders() {
   renderPending = false;
   const keep = {};
-  $("oList").querySelectorAll(".ocard").forEach(c => { const f = [...c.querySelectorAll("[data-form]")].find(x => !x.hidden); if (f) keep[c.dataset.no] = [f.dataset.form, [...f.querySelectorAll("input")].map(i => i.value)] });
+  $("oList").querySelectorAll(".ocard").forEach(c => { const f = [...c.querySelectorAll("[data-form]")].find(x => !x.hidden); if (f) keep[c.dataset.no] = [f.dataset.form, [...f.querySelectorAll("input")].map(i => i.type === "checkbox" ? i.checked : i.value)] });
   renderStats(); renderFilters();
   ORDERS.sort((a, b) => (b.at || 0) - (a.at || 0));
   const q = $("oSearch").value.trim().toLowerCase(), qd = q.replace(/\D/g, ""), f = (FILTERS.find(x => x[0] === oFilter) || FILTERS[0])[2];
@@ -552,7 +565,7 @@ function renderOrders() {
   $("oList").innerHTML = list.length ? list.map(orderCard).join("") : emptyHtml(q);
   for (const [no, [form, vals]] of Object.entries(keep)) {
     const c = cardEl(no), el = c && c.querySelector(`[data-form="${form}"]`); if (!el) continue;
-    el.hidden = false; el.querySelectorAll("input").forEach((i, n) => { if (vals[n] != null) i.value = vals[n] });
+    el.hidden = false; el.querySelectorAll("input").forEach((i, n) => { if (vals[n] == null) return; if (i.type === "checkbox") i.checked = vals[n]; else i.value = vals[n] });
   }
   wireThumbs();
 }
@@ -583,9 +596,14 @@ function doAct(act, o, b, card) {
     return step(b, o, {rider, status: "sent", sentAt: Date.now()}, "sent", `Order ${no}: rider ${rider.name}, out for delivery`, "Rider saved. Send the details to the customer in WhatsApp.");
   }
   if (act === "cancelgo") {
-    const reason = form("cancel").querySelector("[data-creason]").value.trim();
+    const f = form("cancel"), reason = f.querySelector("[data-creason]").value.trim(), rf = f.querySelector("[data-crefund]");
     if (!reason) { toast("Please write the reason for cancelling."); return }
-    return step(b, o, {status: "cancel", prevStatus: o.status, cancelReason: reason, cancelledAt: Date.now()}, "cancel", `Order ${no}: cancelled (${reason})`, "Order cancelled. Send the message to the customer in WhatsApp.");
+    const refund = rf && rf.checked ? paidSoFar(o) : 0;
+    return step(b, o, {status: "cancel", prevStatus: o.status, cancelReason: reason, cancelledAt: Date.now(), refund}, "cancel", `Order ${no}: cancelled (${reason})${refund ? ", refund " + rs(refund) + " due" : ""}`,
+      refund ? "Order cancelled. Send the message in WhatsApp, then refund the money and tap Refund sent." : "Order cancelled. Send the message to the customer in WhatsApp.");
+  }
+  if (act === "refunded") {
+    return step(b, o, {refundAt: Date.now()}, "refunded", `Order ${no}: refund of ${rs(o.refund)} sent`, "Refund recorded. Send the confirmation in WhatsApp.");
   }
 }
 /* Saves a status change, then opens the customer's WhatsApp chat with the matching message. The tab is opened
