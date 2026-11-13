@@ -33,6 +33,8 @@ The shop takes a 50% advance by default (Payments → Advance payment; it can be
 
 Orders that come only on WhatsApp can be added with *Orders → Add order* by pasting the customer's message.
 
+*Cancel order* asks for a reason and, when the customer has paid (a screenshot or an approved payment), offers to refund what they paid; untick it if the money never arrived. The order then shows *Refund due* in Active until *Refund sent* is selected, which confirms the refund to the customer on WhatsApp.
+
 ## Who can sign in (Access page)
 
 The super admin's **Access** page lists everyone who can sign in. Anyone on the list can add a person by their Google email, give someone a new authenticator (for a new phone), or remove a person. A new person opens the admin link, signs in with that Google account and, the first time, scans a QR code with their own authenticator app. Invitations last 14 days. The last person who can sign in cannot be removed.
