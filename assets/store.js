@@ -19,7 +19,7 @@ const F = {cat: "all", occ: "", q: "", sort: "feat"};
 /* AI sample photos carry a visible tag until the owner replaces them with real photos. */
 const SAMPLE_TAG = `<span class="sample-tag">Sample photo</span>`;
 function refPhoto(o){if(!o)return null;if(o.photo)return{src:o.photo,sample:false};const p=o.ref&&findP(o.ref);return p&&p.photo?{src:p.photo,sample:!!p.sample}:null}
-const refImg=(o,alt,fallback)=>{const r=refPhoto(o);return r?`<img src="${esc(photoSrc(r.src))}" alt="${esc(alt)}">${r.sample?SAMPLE_TAG:""}`:fallback};
+const refImg=(o,alt,fallback,attrs)=>{const r=refPhoto(o);return r?`<img src="${esc(photoSrc(r.src))}" alt="${esc(alt)}"${attrs||""}>${r.sample?SAMPLE_TAG:""}`:fallback};
 function card(p){
   const inW=wish.includes(p.id);
   const badge=p.soldOut?`<span class="badge out">Sold out</span>`:p.was>p.price?`<span class="badge sale">${Math.round((1-p.price/p.was)*100)}% off</span>`:p.isNew?`<span class="badge new">New</span>`:p.best?`<span class="badge best">Bestseller</span>`:"";
@@ -39,7 +39,7 @@ function renderHero(){
   $("slides").innerHTML=sl.map((s,i)=>`<div class="slide"${i===slideI?"":" hidden"}>
     <div>${s.kicker?`<span class="hand">${esc(s.kicker)}</span>`:""}<h1>${esc(s.title)}</h1>${s.text?`<p>${esc(s.text)}</p>`:""}
       <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn rose" data-goshop="${esc(s.cat||"all")}" data-goocc="${esc(s.occ||"")}">${esc(s.btn||"Shop now")}</button></div></div>
-    <div class="arch hero-art">${refImg(s,s.title,drawArt(s.art))}</div></div>`).join("");
+    <div class="arch hero-art">${refImg(s,s.title,drawArt(s.art),i===slideI?' fetchpriority="high" decoding="async"':' loading="lazy" decoding="async"')}</div></div>`).join("");
   $("dots").innerHTML=sl.length>1?sl.map((_,i)=>`<button data-dot="${i}" aria-label="Slide ${i+1}" aria-current="${i===slideI}"></button>`).join("")+`<span class="arrows"><button class="ib" data-step="-1" aria-label="Previous slide">‹</button><button class="ib" data-step="1" aria-label="Next slide">›</button></span>`:"";
   clearInterval(slideT);
   if(sl.length>1&&!matchMedia("(prefers-reduced-motion: reduce)").matches)slideT=setInterval(()=>goSlide(slideI+1),6500);
@@ -68,7 +68,7 @@ function renderShelves(){
 function renderPromo(){
   const p=S.promo||{};$("promoSec").hidden=!p.title;
   $("promo").innerHTML=p.title?`<div class="txt"><span class="hand" style="color:inherit;font-size:26px;opacity:.9">${esc(OCCN[p.occ]||"Featured collection")}</span><h2>${esc(p.title)}</h2>${p.text?`<p>${esc(p.text)}</p>`:""}<button class="btn" data-goshop="all" data-goocc="${esc(p.occ||"")}">${esc(p.btn||"Explore")}</button></div>
-    <div class="img">${refImg(p,p.title,drawArt(OCC_ART[p.occ]||DEFAULT_ART.bouquet))}</div>`:"";
+    <div class="img">${refImg(p,p.title,drawArt(OCC_ART[p.occ]||DEFAULT_ART.bouquet),' loading="lazy" decoding="async"')}</div>`:"";
 }
 function renderShop(){
   $("catChips").innerHTML=[["all","All"],...CATS].map(([k,l])=>`<button class="chip" data-cat="${k}" aria-pressed="${F.cat===k}">${l}</button>`).join("");
@@ -131,7 +131,7 @@ function renderReviews(){
 function renderStory(){
   const a=S.about||{};$("story").hidden=!a.title&&!a.text;
   $("storyTitle").textContent=a.title||"";$("storyText").textContent=a.text||"";$("storySig").textContent=a.sign||S.reg.owner||"";
-  $("storyArt").innerHTML=refImg(a,S.shop.name,null)||drawArt({kind:"bouquet",shape:"tulip",colors:["#F7B5CD","#F28AB2","#E86A9A","#F28AB2","#F7B5CD"],wrap:"#FFFFFF"});
+  $("storyArt").innerHTML=refImg(a,S.shop.name,null,' loading="lazy" decoding="async"')||drawArt({kind:"bouquet",shape:"tulip",colors:["#F7B5CD","#F28AB2","#E86A9A","#F28AB2","#F7B5CD"],wrap:"#FFFFFF"});
 }
 function renderChrome(){
   const s=S.shop,pct=+s.advancePct||0;
@@ -443,14 +443,30 @@ $("scrim").onclick=()=>show(null);
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>show(null));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){show(null);closeMega()}});
 
+/* ---------- search engines: business details and products as structured data ----------
+   Products are listed only once they have a real photo (AI sample photos are left out). */
+function renderSchema(){
+  const s=S.shop,base="https://giftoria-atelier.pages.dev/",soc=["insta","fb","tiktok"].map(k=>safeUrl(S.social[k])).filter(Boolean);
+  const biz={"@context":"https://schema.org","@type":"Florist","name":s.name,"url":base,"logo":base+"assets/icon-512.png","image":base+"assets/share.jpg",
+    "description":s.footAbout||"","address":{"@type":"PostalAddress","addressLocality":s.city||"Multan","addressCountry":"PK",...(s.address?{"streetAddress":s.address}:{})},
+    "areaServed":{"@type":"City","name":s.city||"Multan"},"currenciesAccepted":"PKR",...(payAccounts(S).length?{"paymentAccepted":payAccounts(S).map(a=>a.k).join(", ")}:{}),
+    ...(intl(s.wa)?{"telephone":"+"+intl(s.wa)}:{}),...(s.email?{"email":s.email}:{}),...(soc.length?{"sameAs":soc}:{})};
+  const real=S.products.filter(p=>p.photo&&!p.sample);
+  const data=[biz];
+  if(real.length)data.push({"@context":"https://schema.org","@type":"ItemList","name":"Products","itemListElement":real.map((p,i)=>({"@type":"ListItem","position":i+1,
+    "item":{"@type":"Product","name":p.name,"image":new URL(photoSrc(p.photo),base).href,"description":p.desc||p.spec||p.name,"category":CATN[p.cat]||"",
+      "offers":{"@type":"Offer","price":String(p.price),"priceCurrency":"PKR","availability":"https://schema.org/"+(p.soldOut?"OutOfStock":"InStock"),"url":base+"#shop"}}}))});
+  let el=$("ldjson");if(!el){el=document.createElement("script");el.type="application/ld+json";el.id="ldjson";document.head.appendChild(el)}
+  el.textContent=JSON.stringify(data);
+}
+
 /* ---------- start: load the published shop data ---------- */
 (async()=>{
   try{
-    const r=await fetch("data/shop.json?v="+Date.now(),{cache:"no-store"});
-    if(!r.ok)throw new Error(r.status);
-    S=normalizeShop(await r.json());
+    S=normalizeShop(await (window.__shop||fetch("data/shop.json?v="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})));
   }catch(e){$("loader").hidden=true;$("loadErr").hidden=false;return}
   $("loader").hidden=true;$("app").hidden=false;
-  renderAll();
+  renderAll();renderSchema();
+  addEventListener("load",()=>setTimeout(()=>document.querySelectorAll("#slides img[loading=lazy]").forEach(i=>i.loading="eager"),1500));
   if(location.hash&&location.hash.length>1){const t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView()}
 })();

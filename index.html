@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script>if(location.hostname.endsWith(".github.io"))location.replace("https://giftoria-atelier.pages.dev/"+location.search+location.hash)</script>
+<script>window.__shop=fetch("data/shop.json?v="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});window.__shop.catch(()=>{})</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Giftoria Atelier</title>
 <meta name="description" content="Handmade pipe-cleaner and crochet flowers, bouquets and gifts, made to order and delivered across Multan.">
@@ -12,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
-<link rel="stylesheet" href="assets/base.css?v=vrefund1">
-<link rel="stylesheet" href="assets/store.css?v=vrefund1">
+<link rel="stylesheet" href="assets/base.css?v=vfast1">
+<link rel="stylesheet" href="assets/store.css?v=vfast1">
 </head>
 <body>
 
@@ -246,7 +247,7 @@
 </aside>
 <div class="toast" id="toast" hidden></div>
 
-<script src="assets/common.js?v=vrefund1"></script>
-<script src="assets/store.js?v=vrefund1"></script>
+<script src="assets/common.js?v=vfast1"></script>
+<script src="assets/store.js?v=vfast1"></script>
 </body>
 </html>
