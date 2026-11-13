@@ -33,14 +33,24 @@ The shop takes a 50% advance by default (Payments → Advance payment; it can be
 
 Orders that come only on WhatsApp can be added with *Orders → Add order* by pasting the customer's message.
 
+## Who can sign in (Access page)
+
+The super admin's **Access** page lists everyone who can sign in. Anyone on the list can add a person by their Google email, give someone a new authenticator (for a new phone), or remove a person. A new person opens the admin link, signs in with that Google account and, the first time, scans a QR code with their own authenticator app. Invitations last 14 days. The last person who can sign in cannot be removed.
+
+To hand the shop over: add the new person, let them sign in, have them change the WhatsApp number, email and payment accounts, then remove the old account.
+
+- The list is stored as `access.json` in `giftoria-orders`, signed by the sign-in service; each person's authenticator secret is encrypted. A copy edited directly on GitHub is ignored.
+- Google only lets accounts sign in once the Google sign-in app is published (Google Cloud → Google Auth Platform → Audience → Publish app); while it is in testing, add each person under Test users there.
+- If everyone is locked out, delete `access.json` in `giftoria-orders`: the accounts in the `ALLOWED_EMAILS` setting can then sign in again with the original authenticator code.
+
 ## Signing in to the super admin
 
-1. **Sign in with Google** using an allowed Google account.
-2. **Enter the 6-digit code** from the authenticator app (the "Giftoria Atelier" entry).
+1. **Sign in with Google** using a Google account on the Access list.
+2. **Enter the 6-digit code** from the authenticator app (the "Giftoria Atelier" entry). On a first sign-in, scan the QR code shown first.
 
 Both steps are checked by the sign-in service in `auth-worker/` (Cloudflare, `giftoria-auth.giftoria-atelier.workers.dev`), not in the browser. It then gives the admin a 1-hour key limited to the two shop repositories and renews it while the session lasts (12 hours, or 30 days on a trusted device).
 
-- Allowed Google accounts are kept in the service's private `ALLOWED_EMAILS` setting, not in this repository.
+- The starting list of Google accounts is the service's private `ALLOWED_EMAILS` setting; after that, the Access page manages it.
 - The GitHub App **Giftoria Atelier Admin** is installed only on `giftoria-atelier` and `giftoria-orders`, with Contents read and write. Its private key, the authenticator secret and the session key are Cloudflare secrets.
 - To sign everyone out, change `SESSION_VERSION` in `auth-worker/wrangler.toml` and redeploy. To replace a lost authenticator, set a new `TOTP_SECRET` and scan the new QR code.
 

@@ -80,16 +80,51 @@ export async function makeSession(secret, email, ms, version = "1") {
   const body = b64url(enc.encode(JSON.stringify({e: email, x: Date.now() + ms, v: version})));
   return body + "." + await hmac(secret, body);
 }
-/* Returns the session data when the signature is valid, it has not expired and its version matches; otherwise null. */
+/* Returns the session data when the signature is valid, it has not expired and its version matches; otherwise null.
+   Pass version null to skip the version check (the caller then compares it with the person's own version). */
 export async function readSession(secret, token, version = "1") {
   try {
     const [body, sig, extra] = String(token || "").split(".");
     if (!body || !sig || extra !== undefined) return null;
     if (!sameString(sig, await hmac(secret, body))) return null;
     const d = parseJSON(b64urlToBytes(body));
-    if (!(d.x > Date.now()) || d.v !== version) return null;
+    if (!(d.x > Date.now()) || (version !== null && d.v !== version)) return null;
     return d;
   } catch (e) { return null }
+}
+
+/* ---------- the list of people who may sign in ----------
+   Kept in the private orders repository as access.json. The list is signed with a key only this service holds, so
+   an edit made directly on GitHub (by a leaked token, for example) is ignored; each person's authenticator secret
+   is encrypted the same way. */
+export function bytesToBase32(bytes) {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"; let bits = 0, val = 0, out = "";
+  for (const b of bytes) { val = ((val << 8) | b) & 0xFFFF; bits += 8; while (bits >= 5) { out += A[(val >>> (bits - 5)) & 31]; bits -= 5 } }
+  if (bits > 0) out += A[(val << (5 - bits)) & 31];
+  return out;
+}
+export const newTotpSecret = () => bytesToBase32(crypto.getRandomValues(new Uint8Array(20)));
+export const otpauthUri = (secret, account, issuer = "Giftoria Atelier") =>
+  `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+async function sealKey(secret) {
+  const base = await crypto.subtle.importKey("raw", enc.encode(secret), "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name: "HKDF", hash: "SHA-256", salt: enc.encode("giftoria-access"), info: enc.encode("totp-seal-v1")}, base, {name: "AES-GCM", length: 256}, false, ["encrypt", "decrypt"]);
+}
+export async function sealText(secret, text) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  return "v1." + b64url(iv) + "." + b64url(await crypto.subtle.encrypt({name: "AES-GCM", iv}, await sealKey(secret), enc.encode(text)));
+}
+export async function openText(secret, sealed) {
+  try {
+    const [v, iv, ct, extra] = String(sealed || "").split(".");
+    if (v !== "v1" || !iv || !ct || extra !== undefined) return null;
+    return dec.decode(await crypto.subtle.decrypt({name: "AES-GCM", iv: b64urlToBytes(iv)}, await sealKey(secret), b64urlToBytes(ct)));
+  } catch (e) { return null }
+}
+const accessBody = d => JSON.stringify({users: d.users, updated: d.updated});
+export const signAccess = (secret, d) => hmac("access-v1|" + secret, accessBody(d));
+export async function verifyAccess(secret, d) {
+  try { return !!(d && Array.isArray(d.users) && d.sig) && sameString(d.sig, await signAccess(secret, d)) } catch (e) { return false }
 }
 
 /* ---------- payment screenshots ---------- */

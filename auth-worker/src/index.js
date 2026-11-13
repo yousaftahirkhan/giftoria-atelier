@@ -14,8 +14,10 @@
    Settings: wrangler.toml [vars] and Cloudflare secrets (marked *):
      ADMIN_URL, SITE_ORIGINS (other addresses the shop is served from), REPO_OWNER, SITE_REPO, ORDERS_REPO, GOOGLE_CLIENT_ID, GITHUB_CLIENT_ID, ALLOWED_USERS, SESSION_VERSION
      ALLOWED_EMAILS*, TOTP_SECRET*, SESSION_SECRET*, GITHUB_APP_PRIVATE_KEY*, GITHUB_CLIENT_SECRET*
-   Changing SESSION_VERSION signs everyone out.                                                                     */
-import {verifyGoogleIdToken, checkTotp, makeSession, readSession, installationToken, recentOrderNo, imageKind, randomId} from "./lib.js";
+   Who can sign in is managed on the super admin's Access page (POST /access, stored in access.json); ALLOWED_EMAILS
+   with TOTP_SECRET is the starting list and the way back in. Changing SESSION_VERSION signs everyone out.                                                                     */
+import {verifyGoogleIdToken, checkTotp, makeSession, readSession, installationToken, recentOrderNo, imageKind, randomId,
+  newTotpSecret, otpauthUri, sealText, openText, signAccess, verifyAccess} from "./lib.js";
 
 const UA = "giftoria-auth";
 const SHORT = 12 * 3600e3, LONG = 30 * 864e5;
@@ -29,6 +31,7 @@ export default {
       if (url.pathname === "/token" && request.method === "POST") return await refresh(request, env);
       if (url.pathname === "/order" && request.method === "POST") return await placeOrder(request, env);
       if (url.pathname === "/proof" && request.method === "POST") return await saveProof(request, env);
+      if (url.pathname === "/access" && request.method === "POST") return await manageAccess(request, env);
       if (url.pathname === "/callback") return await githubCallback(url, env);
       if (url.pathname === "/") return new Response("Giftoria Atelier admin sign-in service.", {headers: {"content-type": "text/plain; charset=utf-8"}});
     } catch (e) {
@@ -66,27 +69,136 @@ function tooMany(email) {
 }
 const noteFailure = email => attempts.set(email, [...(attempts.get(email) || []), Date.now()]);
 
+/* ---------- who may sign in ----------
+   The list lives in access.json in the private orders repository and is managed on the super admin's Access page.
+   Until the first change is made there (or if the file is deleted or edited outside this service), the people in
+   ALLOWED_EMAILS sign in with the shared TOTP_SECRET, so the owner can always get back in. A person added on the
+   Access page sets up their own authenticator at their first sign-in; the invitation lasts 14 days. */
+const INVITE_MS = 14 * 864e5, MAX_PEOPLE = 10;
+const sessVer = (env, u) => (env.SESSION_VERSION || "1") + (u && u.sv ? "." + u.sv : "");
+const inviteExpired = u => u.status === "pending" && Date.now() - (u.added || 0) > INVITE_MS;
+const utf8b64 = b64 => new TextDecoder().decode(Uint8Array.from(atob(String(b64 || "").replace(/\s/g, "")), c => c.charCodeAt(0)));
+const fallbackAccess = (env, sha) => ({users: allowedEmails(env).map(email => ({email, name: "", status: "active", sv: 0, added: 0})), sha, managed: false});
+let accCache = null;
+async function loadAccess(env, fresh) {
+  if (!fresh && accCache && Date.now() - accCache.at < 15e3) return accCache.v;
+  const token = (await repoToken(env)).token;
+  const r = await fetch(ordersUrl(env) + "/contents/access.json", {headers: ghHeaders(token)});
+  let v;
+  if (r.status === 404) v = fallbackAccess(env, null);
+  else if (!r.ok) throw new Error("access read " + r.status);
+  else {
+    const f = await r.json(); let d = null;
+    try { d = JSON.parse(utf8b64(f.content)) } catch (e) { d = null }
+    v = await verifyAccess(env.SESSION_SECRET, d) ? {users: d.users, sha: f.sha, managed: true} : fallbackAccess(env, f.sha);
+  }
+  accCache = {v, at: Date.now()};
+  return v;
+}
+async function saveAccess(env, users, sha) {
+  const doc = {users, updated: Date.now()}; doc.sig = await signAccess(env.SESSION_SECRET, doc);
+  const token = (await repoToken(env)).token;
+  const w = await fetch(ordersUrl(env) + "/contents/access.json", {method: "PUT", headers: ghHeaders(token),
+    body: JSON.stringify({message: "Update who can sign in", content: b64utf8(JSON.stringify(doc, null, 1) + "\n"), ...(sha ? {sha} : {})})});
+  accCache = null;
+  if (!w.ok) { const e = new Error("access write " + w.status); e.conflict = w.status === 409 || w.status === 422; throw e }
+}
+/* The first managed list keeps the original people on the shared authenticator they already use. */
+async function managedUsers(env, acc) {
+  if (acc.managed) return acc.users.map(u => ({...u}));
+  const t = await sealText(env.SESSION_SECRET, env.TOTP_SECRET);
+  return acc.users.map(u => ({...u, totp: t}));
+}
+const secretOf = (env, u) => u.totp ? openText(env.SESSION_SECRET, u.totp) : env.TOTP_SECRET;
+/* The person behind a session, if they still have access and the session is still current for them. */
+async function activePerson(env, s, fresh) {
+  const acc = await loadAccess(env, fresh);
+  const u = acc.users.find(x => x.email === s.e && x.status === "active");
+  return u && s.v === sessVer(env, u) ? u : null;
+}
+
+/* POST /login {id_token, code, remember}. Without a code it only says what comes next: {need: "code"}, or for a
+   person signing in for the first time {setup: true, secret, otpauth} to add to their authenticator app. */
 async function login(request, env) {
   const b = await request.json().catch(() => ({}));
   const g = await verifyGoogleIdToken(b.id_token, env.GOOGLE_CLIENT_ID);
   if (!g) return reply(request, env, {error: "google_invalid"}, 401);
   const email = String(g.email).toLowerCase();
-  if (!allowedEmails(env).includes(email)) return reply(request, env, {error: "not_allowed"}, 403);
+  let acc = await loadAccess(env, true), u = acc.users.find(x => x.email === email);
+  if (!u) return reply(request, env, {error: "not_allowed"}, 403);
+  if (inviteExpired(u)) return reply(request, env, {error: "invite_expired"}, 403);
   if (tooMany(email)) return reply(request, env, {error: "too_many"}, 429);
-  if (!await checkTotp(env.TOTP_SECRET, b.code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+  const code = String(b.code || "").replace(/\s/g, "");
+  if (u.status === "pending") {
+    if (!u.setup) {
+      const setup = await sealText(env.SESSION_SECRET, newTotpSecret());
+      try { await saveAccess(env, acc.users.map(x => x.email === email ? {...x, setup} : x), acc.sha) }
+      catch (e) { if (!e.conflict) throw e }
+      acc = await loadAccess(env, true); u = acc.users.find(x => x.email === email && x.status === "pending");
+      if (!u || !u.setup) return reply(request, env, {error: "busy"}, 409);
+    }
+    const secret = await openText(env.SESSION_SECRET, u.setup);
+    if (!secret) return reply(request, env, {error: "busy"}, 409);
+    if (!code) return reply(request, env, {setup: true, email, secret, otpauth: otpauthUri(secret, email)});
+    if (!await checkTotp(secret, code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+    const {setup, ...rest} = u;
+    u = {...rest, status: "active", totp: setup, activatedAt: Date.now()};
+    try { await saveAccess(env, acc.users.map(x => x.email === email ? u : x), acc.sha) }
+    catch (e) { if (e.conflict) return reply(request, env, {error: "busy"}, 409); throw e }
+  } else {
+    if (!code) return reply(request, env, {need: "code", email});
+    const secret = await secretOf(env, u);
+    if (!secret || !await checkTotp(secret, code)) { noteFailure(email); return reply(request, env, {error: "bad_code"}, 401) }
+  }
   attempts.delete(email);
   const ms = b.remember ? LONG : SHORT;
-  const session = await makeSession(env.SESSION_SECRET, email, ms, env.SESSION_VERSION || "1");
+  const session = await makeSession(env.SESSION_SECRET, email, ms, sessVer(env, u));
   const t = await repoToken(env);
-  return reply(request, env, {session, session_exp: Date.now() + ms, token: t.token, token_exp: t.exp, email});
+  return reply(request, env, {session, session_exp: Date.now() + ms, token: t.token, token_exp: t.exp, email, name: u.name || ""});
 }
 
 async function refresh(request, env) {
   const b = await request.json().catch(() => ({}));
-  const s = await readSession(env.SESSION_SECRET, b.session, env.SESSION_VERSION || "1");
-  if (!s || !allowedEmails(env).includes(s.e)) return reply(request, env, {error: "session_expired"}, 401);
+  const s = await readSession(env.SESSION_SECRET, b.session, null);
+  const u = s && await activePerson(env, s);
+  if (!u) return reply(request, env, {error: "session_expired"}, 401);
   const t = await repoToken(env);
-  return reply(request, env, {token: t.token, token_exp: t.exp, email: s.e});
+  return reply(request, env, {token: t.token, token_exp: t.exp, email: s.e, name: u.name || ""});
+}
+
+/* POST /access {session, op: "list" | "add" | "remove" | "reset", email, name}: the Access page. Anyone with access
+   can change the list, but the last person who can sign in cannot be removed. "reset" makes the person set up a new
+   authenticator at their next sign-in (and signs them out); for an expired invitation it sends a fresh one. */
+async function manageAccess(request, env) {
+  const b = await request.json().catch(() => ({}));
+  const s = await readSession(env.SESSION_SECRET, b.session, null);
+  const me = s && await activePerson(env, s, true);
+  if (!me) return reply(request, env, {error: "session_expired"}, 401);
+  const acc = await loadAccess(env);
+  const view = (users, managed) => reply(request, env, {me: s.e, managed, users: users.map(u => ({email: u.email, name: u.name || "",
+    status: inviteExpired(u) ? "expired" : u.status, added: u.added || 0, activatedAt: u.activatedAt || 0, addedBy: u.addedBy || ""}))});
+  const op = String(b.op || "list");
+  if (op === "list") return view(acc.users, acc.managed);
+  const email = String(b.email || "").trim().toLowerCase().slice(0, 120);
+  let users = await managedUsers(env, acc);
+  const target = users.find(u => u.email === email), active = users.filter(u => u.status === "active");
+  if (op === "add") {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return reply(request, env, {error: "bad_email"}, 400);
+    if (target) return reply(request, env, {error: "exists"}, 409);
+    if (users.length >= MAX_PEOPLE) return reply(request, env, {error: "too_many_people"}, 400);
+    users.push({email, name: str(b.name, 40), status: "pending", sv: 0, added: Date.now(), addedBy: s.e});
+  } else if (op === "remove") {
+    if (!target) return reply(request, env, {error: "not_found"}, 404);
+    if (target.status === "active" && active.length <= 1) return reply(request, env, {error: "last_admin"}, 400);
+    users = users.filter(u => u.email !== email);
+  } else if (op === "reset") {
+    if (!target) return reply(request, env, {error: "not_found"}, 404);
+    const {totp, setup, ...rest} = target;
+    users = users.map(u => u.email === email ? {...rest, status: "pending", sv: (target.sv || 0) + 1, added: Date.now(), addedBy: s.e} : u);
+  } else return reply(request, env, {error: "bad_request"}, 400);
+  try { await saveAccess(env, users, acc.sha) }
+  catch (e) { if (e.conflict) return reply(request, env, {error: "busy"}, 409); throw e }
+  return view(users, true);
 }
 
 /* ---------- "Sign in with GitHub" ---------- */

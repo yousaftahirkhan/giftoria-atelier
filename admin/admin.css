@@ -330,3 +330,27 @@ body.admin .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:70
 /* every small button is at least 40px tall; filter tabs grow on phones */
 body.admin .sm{min-height:40px}
 @media (max-width:899px){.seg button{min-height:40px}}
+/* Access page: who can sign in */
+.box-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.acc-list{display:flex;flex-direction:column}
+.acc-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;gap:6px 14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.acc-row:first-child{border-top:0}
+.acc-t{display:flex;flex-direction:column;min-width:0;line-height:1.4}
+.acc-t b{font-size:15px}
+.acc-t .em{font-size:14px;overflow-wrap:anywhere}
+.acc-t .sub{font-size:12.5px}
+.acc-a{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.acc-btns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.acc-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.acc-steps .link{display:inline;font-size:inherit}
+@media (max-width:640px){
+  .acc-row{grid-template-columns:36px minmax(0,1fr)}
+  .acc-row .pill{grid-column:2;justify-self:start}
+  .acc-row .acc-a{grid-column:1/-1;justify-content:flex-start}
+}
+@media (max-width:899px){.side-nav .tab[data-tab="access"]{display:none}}
+/* first sign-in: set up the authenticator with a QR code */
+.setup{display:flex;flex-direction:column;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px}
+.qr{display:grid;place-items:center;background:#FFFFFF;border-radius:12px;padding:8px;min-height:120px}
+.qr svg{width:200px;height:200px;max-width:100%}
+.setup code{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 6px;overflow-wrap:anywhere}

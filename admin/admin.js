@@ -116,19 +116,47 @@ function initGoogle() {
     else if (++n > 75) { clearInterval(t); $("gMsg").textContent = "Google sign-in could not load. Check your connection and reload the page." }
   }, 200);
 }
-function onGoogle(resp) {
+/* After Google, the sign-in service says what comes next: the usual 6-digit code, or, for someone signing in for the
+   first time, setting up their authenticator app with a QR code. */
+async function onGoogle(resp) {
   gCred = resp && resp.credential; let email = "";
   try { email = JSON.parse(atob(gCred.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).email || "" } catch (e) {}
-  $("gEmail").textContent = email || "your Google account";
-  $("gStep1").hidden = true; $("gStep2").hidden = false; $("gMsg").textContent = ""; $("otp").value = ""; $("otp").focus();
+  $("gMsg").textContent = "Checking your account…";
+  let d;
+  try { d = await authPost("/login", {id_token: gCred}) }
+  catch (err) { gCred = null; $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err); return }
+  $("gMsg").textContent = "";
+  $("setupBox").hidden = !d.setup;
+  $("otpHint").innerHTML = d.setup ? `Then type the 6-digit code the app shows for <b>Giftoria Atelier</b> to finish.`
+    : `Signed in as <b>${esc(email || "your Google account")}</b>. Enter the 6-digit code from your authenticator app.`;
+  if (d.setup) { $("setupKey").textContent = String(d.secret || "").replace(/(.{4})/g, "$1 ").trim(); drawQr(d.otpauth) }
+  $("gStep1").hidden = true; $("gStep2").hidden = false; $("otp").value = ""; $("otp").focus();
 }
-$("gRestart").onclick = () => { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false; $("gMsg").textContent = ""; try { google.accounts.id.disableAutoSelect() } catch (e) {} };
+/* The QR code is drawn in the browser by a small library from cdnjs (checked against its published hash). */
+const QR_SRC = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js", QR_SRI = "sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1";
+let qrLib = null;
+function loadQrLib() {
+  return qrLib || (qrLib = new Promise((res, rej) => {
+    if (window.qrcode) return res(window.qrcode);
+    const sc = document.createElement("script"); sc.src = QR_SRC; sc.integrity = QR_SRI; sc.crossOrigin = "anonymous";
+    sc.onload = () => window.qrcode ? res(window.qrcode) : rej(new Error("qr")); sc.onerror = () => { qrLib = null; rej(new Error("qr")) };
+    document.head.appendChild(sc);
+  }));
+}
+async function drawQr(text) {
+  const box = $("setupQr"); box.innerHTML = `<span class="hint">Loading the QR code…</span>`;
+  try { const qr = (await loadQrLib())(0, "M"); qr.addData(text); qr.make(); box.innerHTML = qr.createSvgTag(5, 2) }
+  catch (e) { box.innerHTML = `<span class="hint">The QR code could not load. Use the setup key below instead.</span>` }
+}
+$("gRestart").onclick = () => { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false; $("setupBox").hidden = true; $("gMsg").textContent = ""; try { google.accounts.id.disableAutoSelect() } catch (e) {} };
 $("otp").addEventListener("input", () => { $("otp").value = $("otp").value.replace(/\D/g, "").slice(0, 6) });
 const LOGIN_ERR = {
   bad_code: "That code is not correct. Use the newest code in your authenticator app and check that your phone's time is set automatically.",
   google_invalid: "Your Google sign-in has expired. Select \"Use a different Google account\" and sign in again.",
   not_allowed: "This Google account is not allowed to manage this shop.",
-  too_many: "Too many wrong codes. Please wait 15 minutes and try again."
+  too_many: "Too many wrong codes. Please wait 15 minutes and try again.",
+  invite_expired: "Your invitation has expired. Ask the shop owner to choose Invite again on the Access page.",
+  busy: "Please try again in a moment."
 };
 $("gStep2").addEventListener("submit", async e => {
   e.preventDefault();
@@ -141,7 +169,7 @@ $("gStep2").addEventListener("submit", async e => {
     await signIn(d.token, "app");
   } catch (err) {
     $("gMsg").textContent = LOGIN_ERR[err.code] || signInError(err);
-    if (err.code === "google_invalid" || err.code === "not_allowed") { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false }
+    if (["google_invalid", "not_allowed", "invite_expired"].includes(err.code)) { gCred = null; $("gStep2").hidden = true; $("gStep1").hidden = false; $("setupBox").hidden = true }
     if (err.code === "bad_code") { $("otp").value = ""; $("otp").focus() }
   } finally { $("otpBtn").disabled = false; $("otpBtn").textContent = "Verify and sign in" }
 });
@@ -171,30 +199,33 @@ $("signinForm").addEventListener("submit", async e => {
   catch (err) { TOKEN = ""; $("signMsg").textContent = err && err.status === 401 ? "This access token is not valid or has expired. Check it and try again." : signInError(err) }
   finally { $("signBtn").disabled = false; $("signBtn").textContent = "Sign in with token" }
 });
-function signOutNow() {
-  if (dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
+function signOutNow(force) {
+  if (force !== true && dirty && !confirm("You have unpublished changes. Sign out and discard them?")) return;
   dirty = false; dropToken(); dropSession(); try { google.accounts.id.disableAutoSelect() } catch (e) {}
   history.replaceState(null, "", location.pathname); location.reload();
 }
 $("signOut").onclick = signOutNow; $("signOut2").onclick = signOutNow;
 
 /* ---------- sections ---------- */
-const TABS = ["orders", "products", "home", "business", "pay"];
+const TABS = ["orders", "products", "home", "business", "pay", "access"];
 const PAGES = {
   orders: ["Orders", "Website orders arrive here on their own, with the customer's payment screenshot."],
   products: ["Products", "What customers can order: photos, prices, categories and stock."],
   home: ["Homepage", "Announcement, slides, promo banner, photos, reviews and your story."],
   business: ["Business info", "Shop details, delivery areas, contact numbers and policies."],
-  pay: ["Payments & delivery", "The advance, the accounts customers pay into, and cart add-ons."]
+  pay: ["Payments & delivery", "The advance, the accounts customers pay into, and cart add-ons."],
+  access: ["Access", "Who can sign in to this admin, and how to hand the shop to someone else."]
 };
 function selectTab(t) {
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === t));
   TABS.forEach(k => $("tab-" + k).hidden = k !== t);
-  $("saveBar").hidden = t === "orders";
+  $("saveBar").hidden = t === "orders" || t === "access";
   const short = document.querySelector(`.tab[data-tab="${t}"] .t`).textContent;
   $("pageTitle").innerHTML = `<span class="tl">${esc(PAGES[t][0])}</span><span class="ts">${esc(short)}</span>`; $("pageSub").textContent = PAGES[t][1];
   closePops(); history.replaceState(null, "", "#" + t); scrollTo(0, 0);
+  if (t === "access") loadAccessList();
 }
+document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g && TABS.includes(g.dataset.goto)) selectTab(g.dataset.goto) });
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => selectTab(b.dataset.tab));
 
 /* ---------- menus, dialogs, signed-in account ---------- */
@@ -840,6 +871,76 @@ $("pSave").onclick = () => {
   if (editing == null) S.products.unshift(p); else S.products[editing] = p;
   $("pEditor").hidden = true; editing = null; pending = null; afterP(); toast("Product saved. Publish to make it live.");
 };
+
+/* =====================================================================
+   ACCESS: who can sign in. The list is kept by the sign-in service (auth-worker, POST /access), which signs it and
+   stores each person's authenticator secret encrypted, so it can only be changed from here.
+   ===================================================================== */
+let ACCESS = null, accBusy = false;
+const ADMIN_LINK = "https://giftoria-atelier.pages.dev/admin/";
+const ACC_ERR = {bad_email: "Enter a valid Google email address, for example name@gmail.com.", exists: "This email already has access.",
+  too_many_people: "Up to 10 people can have access.", last_admin: "You can't remove the last person who can sign in. Add someone else first.",
+  not_found: "This person no longer has access. The list has been refreshed.", busy: "Someone changed the list at the same time. Please try again.",
+  session_expired: "Your sign-in has expired. Sign out and sign in again.", mode: "Sign in with Google to change who has access."};
+const fmtDay = t => new Date(t).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+const accessCall = (op, extra) => MODE === "app" && SESSION ? authPost("/access", {session: SESSION, op, ...extra}) : Promise.reject(Object.assign(new Error("mode"), {code: "mode"}));
+async function loadAccessList() {
+  const app = MODE === "app" && !!SESSION;
+  $("accessOff").hidden = app; $("accAdd").hidden = !app; $("accRefresh").hidden = !app;
+  if (!app) { $("accList").innerHTML = `<p class="hint">Sign in with Google to see who has access.</p>`; return }
+  if (!ACCESS) $("accList").innerHTML = `<p class="hint">Loading…</p>`;
+  try { ACCESS = await accessCall("list"); renderAccess() }
+  catch (e) { $("accList").innerHTML = `<p class="msg err" style="text-align:left">${esc(ACC_ERR[e.code] || errText(e))}</p>` }
+}
+function renderAccess() {
+  const A = ACCESS; if (!A) return;
+  const active = A.users.filter(u => u.status === "active").length;
+  $("accCount").textContent = A.users.length;
+  $("accList").innerHTML = A.users.map(u => {
+    const me = u.email === A.me, nm = u.name || u.email.split("@")[0];
+    const pill = u.status === "active" ? `<span class="pill s-sent">Active</span>` : u.status === "expired" ? `<span class="pill s-cancel">Invitation expired</span>` : `<span class="pill s-new">Waiting for first sign-in</span>`;
+    const note = u.status === "active" ? (u.activatedAt ? "Set up on " + fmtDay(u.activatedAt) : "Original owner account")
+      : u.status === "expired" ? "Invited on " + fmtDay(u.added) + ". Invite again to give them another 14 days."
+      : `Invited on ${fmtDay(u.added)}${u.addedBy ? " by " + u.addedBy : ""}. Expires on ${fmtDay(u.added + 14 * 864e5)}.`;
+    const reset = u.status === "active" ? `<button class="sm" type="button" data-acc="reset">New authenticator</button>` : u.status === "expired" ? `<button class="sm" type="button" data-acc="reset">Invite again</button>` : "";
+    const last = u.status === "active" && active <= 1;
+    return `<div class="acc-row" data-email="${esc(u.email)}">
+      <span class="av" aria-hidden="true">${esc((nm.replace(/[^A-Za-z]/g, "")[0] || "?").toUpperCase())}</span>
+      <div class="acc-t"><b>${esc(nm)}${me ? ` <span class="tag">You</span>` : ""}</b><span class="em">${esc(u.email)}</span><span class="sub">${esc(note)}</span></div>
+      ${pill}
+      <div class="acc-a">${reset}<button class="sm red" type="button" data-acc="remove"${last ? ` disabled title="The last person who can sign in cannot be removed"` : ""}>Remove</button></div>
+    </div>`;
+  }).join("") || `<p class="hint">Nobody yet.</p>`;
+}
+$("accRefresh").onclick = () => { ACCESS = null; loadAccessList() };
+$("accCopy").onclick = () => navigator.clipboard.writeText(ADMIN_LINK).then(() => toast("Admin link copied")).catch(() => toast("Copy this link: " + ADMIN_LINK));
+$("accAdd").addEventListener("submit", async e => {
+  e.preventDefault(); if (accBusy) return;
+  const email = $("accEmail").value.trim(), name = $("accName").value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { $("accMsg").textContent = ACC_ERR.bad_email; $("accEmail").focus(); return }
+  accBusy = true; $("accAddBtn").disabled = true; $("accMsg").textContent = "";
+  try { ACCESS = await accessCall("add", {email, name}); renderAccess(); $("accEmail").value = ""; $("accName").value = ""; toast("Access given. Now send them the admin link.") }
+  catch (err) { $("accMsg").textContent = ACC_ERR[err.code] || errText(err) }
+  finally { accBusy = false; $("accAddBtn").disabled = false }
+});
+/* Remove and New authenticator ask for a second tap before they act. */
+$("accList").addEventListener("click", async e => {
+  const b = e.target.closest("[data-acc]"); if (!b || b.disabled || accBusy) return;
+  const email = b.closest(".acc-row").dataset.email, op = b.dataset.acc, me = !!ACCESS && email === ACCESS.me;
+  if (b.dataset.sure !== "1") {
+    const old = b.textContent; b.dataset.sure = "1";
+    b.textContent = op === "remove" ? (me ? "Remove me? Tap again" : "Tap again to remove") : old === "Invite again" ? "Tap again to invite" : "Tap again to confirm";
+    setTimeout(() => { if (b.isConnected && b.dataset.sure === "1") { b.dataset.sure = ""; b.textContent = old } }, 4000);
+    return;
+  }
+  accBusy = true; b.disabled = true;
+  try {
+    ACCESS = await accessCall(op, {email}); renderAccess();
+    if (me) { toast(op === "remove" ? "Your access was removed. Signing you out…" : "Signing you out. Sign in again to scan your new code."); setTimeout(() => signOutNow(true), 1600); return }
+    toast(op === "remove" ? "Access removed for " + email : b.textContent.includes("invite") ? "Invitation renewed for 14 days" : "Done. They scan a new code at their next sign-in.");
+  } catch (err) { toast(ACC_ERR[err.code] || errText(err)); if (err.code === "not_found") { ACCESS = null; loadAccessList() } }
+  finally { accBusy = false; if (b.isConnected) b.disabled = false }
+});
 
 /* ---------- start ---------- */
 (async () => {

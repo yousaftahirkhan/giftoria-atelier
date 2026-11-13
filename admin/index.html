@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=vpay50a">
-<link rel="stylesheet" href="admin.css?v=vpay50a">
+<link rel="stylesheet" href="../assets/base.css?v=vaccess1">
+<link rel="stylesheet" href="admin.css?v=vaccess1">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="admin">
@@ -30,11 +30,16 @@
       <div id="gStep1" class="form">
         <div class="eyebrow" style="text-align:center">Step 1 of 2</div>
         <div id="gBtn" class="gbtn"></div>
-        <p class="hint" style="text-align:center">Sign in with the shop's Google account.</p>
+        <p class="hint" style="text-align:center">Sign in with the Google account that was given access.</p>
       </div>
       <form class="form" id="gStep2" hidden autocomplete="off" novalidate>
         <div class="eyebrow">Step 2 of 2</div>
-        <p class="hint">Signed in as <b id="gEmail"></b>. Enter the 6-digit code from your authenticator app.</p>
+        <div class="setup" id="setupBox" hidden>
+          <p class="hint"><b>Welcome! First, set up your authenticator.</b> Open Google Authenticator or Microsoft Authenticator on your phone, tap <b>+</b> and scan this code.</p>
+          <div class="qr" id="setupQr"></div>
+          <p class="hint">Can't scan it? In the app choose <b>Enter a setup key</b> and type this key: <code id="setupKey"></code></p>
+        </div>
+        <p class="hint" id="otpHint">Signed in as <b id="gEmail"></b>. Enter the 6-digit code from your authenticator app.</p>
         <label for="otp">Authenticator code<input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"></label>
         <label class="toggle" for="trust"><input type="checkbox" id="trust"> Keep me signed in on this device for 30 days</label>
         <button class="btn rose block" type="submit" id="otpBtn">Verify and sign in</button>
@@ -85,6 +90,7 @@
       <button class="tab" type="button" role="tab" data-tab="home" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg><span class="t">Homepage</span></button>
       <button class="tab" type="button" role="tab" data-tab="business" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10"/><path d="M3 10l2-6h14l2 6"/><path d="M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M10 20v-5h4v5"/></svg><span class="t">Business</span></button>
       <button class="tab" type="button" role="tab" data-tab="pay" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 15h3"/></svg><span class="t">Payments</span></button>
+      <button class="tab" type="button" role="tab" data-tab="access" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span class="t">Access</span></button>
     </nav>
     <div class="side-foot">
       <a class="side-link" href="https://giftoria-atelier.pages.dev/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span>View website</span></a>
@@ -114,6 +120,7 @@
           <button class="ib" type="button" id="moreBtn" aria-label="More" aria-expanded="false" aria-controls="morePop"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
           <div class="pop menu" id="morePop" hidden>
             <span class="pop-me" id="meMail2"></span>
+            <button class="pop-item" type="button" data-goto="access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 8-7 9-4-1-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Access and sign-in</button>
             <a class="pop-item" href="https://giftoria-atelier.pages.dev/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>View website</a>
             <button class="pop-item" type="button" id="signOut2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>Sign out</button>
           </div>
@@ -304,6 +311,36 @@
         <button class="sm" type="button" data-ladd="addons" style="align-self:start">+ Add-on</button>
       </div>
     </div>
+
+    <!-- Access: who can sign in -->
+    <div class="panel" id="tab-access" hidden>
+      <div class="banner">Everyone listed here signs in with their own Google account and their own authenticator code, and can manage the whole shop: orders, products, payments and this list.</div>
+      <div class="banner warn" id="accessOff" hidden>You signed in with GitHub. Sign out and sign in with Google to see or change who has access.</div>
+      <div class="box">
+        <div class="box-h"><h3>People with access (<span id="accCount">0</span>)</h3><button class="sm" type="button" id="accRefresh">Refresh</button></div>
+        <div id="accList" class="acc-list"></div>
+      </div>
+      <form class="box" id="accAdd" novalidate>
+        <h3>Give someone access</h3>
+        <div class="two">
+          <label class="fld" for="accEmail">Their Google email<input id="accEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120" placeholder="name@gmail.com"></label>
+          <label class="fld" for="accName">Name (optional)<input id="accName" maxlength="40" autocomplete="off" placeholder="e.g. Sara"></label>
+        </div>
+        <div class="acc-btns"><button class="btn em md" type="submit" id="accAddBtn">Give access</button><button class="sm" type="button" id="accCopy">Copy the admin link</button></div>
+        <p class="hint">Then send them the admin link, <b>giftoria-atelier.pages.dev/admin</b>. They sign in with this Google account and, the first time, scan a QR code with an authenticator app on their phone. The invitation lasts 14 days.</p>
+        <div class="msg err" id="accMsg" role="alert"></div>
+      </form>
+      <div class="box">
+        <h3>Handing the shop to someone else</h3>
+        <ol class="acc-steps">
+          <li>Add their Google email above and send them the admin link.</li>
+          <li>They sign in and set up their own authenticator app.</li>
+          <li>They change the WhatsApp number and email in <button class="link" type="button" data-goto="business">Business info</button>, and the payment accounts in <button class="link" type="button" data-goto="pay">Payments</button>.</li>
+          <li>Remove your own access here. You are signed out straight away.</li>
+        </ol>
+        <p class="hint">New phone? Ask another person on this list to choose <b>New authenticator</b> for you, then sign in again and scan the new code.</p>
+      </div>
+    </div>
     </main>
   </div>
 
@@ -340,8 +377,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js?v=vpay50a"></script>
-<script src="config.js?v=vpay50a"></script>
-<script src="admin.js?v=vpay50a"></script>
+<script src="../assets/common.js?v=vaccess1"></script>
+<script src="config.js?v=vaccess1"></script>
+<script src="admin.js?v=vaccess1"></script>
 </body>
 </html>
