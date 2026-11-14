@@ -715,7 +715,7 @@ async function loadContent() {
   const ref = await gh(`${SITE}/git/ref/heads/${BRANCH}`);
   const sha = ref.object.sha;
   const raw = await gh(`${SITE}/contents/data/shop.json?ref=${sha}`, {raw: true});
-  S = normalizeShop(JSON.parse(raw)); baseSha = sha; loadedImgs = imgPaths(S);
+  S = normalizeShop(JSON.parse(raw)); baseSha = sha; loadedImgs = imgPaths(S); applyMenu(S, true); fillMenuSelects();
   if (!Array.isArray(S.pay.accounts)) { const p = S.pay;
     S.pay = {accounts: [{method: "JazzCash", title: p.jazzName || "", number: p.jazz || ""}, {method: "Easypaisa", title: p.easyName || "", number: p.easy || ""},
       {method: "MCB Bank", title: "", number: ""}, {method: "Meezan Bank", title: "", number: ""}]};
@@ -782,9 +782,47 @@ async function storePhoto(file, max, name) {
 }
 const PHOTO_ERR = "Could not use this photo. Please choose a JPG or PNG photo.";
 
-$("b-po").innerHTML = `<option value="">Whole shop</option>` + OCCS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
-$("pCat").innerHTML = CATS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("");
-$("pOcc").innerHTML = OCCS.map(([k, l]) => `<label class="toggle" for="po_${k}"><input type="checkbox" id="po_${k}" value="${k}"> ${l}</label>`).join("");
+function fillMenuSelects() {
+  $("b-po").innerHTML = `<option value="">Whole shop</option>` + OCCS.map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join("");
+  $("pCat").innerHTML = CATS.map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join("");
+  $("pOcc").innerHTML = OCCS.map(([k, l]) => `<label class="toggle" for="po_${esc(k)}"><input type="checkbox" id="po_${esc(k)}" value="${esc(k)}"> ${esc(l)}</label>`).join("");
+}
+fillMenuSelects();
+
+/* ---------- menu editor: categories and occasions ---------- */
+const MENU = {cats: ["mCats", "category", p => k => p.cat === k], occs: ["mOccs", "occasion", p => k => (p.occ || []).includes(k)]};
+const menuUse = (kind, k) => S.products.filter(p => MENU[kind][2](p)(k)).length;
+function menuList(kind) { if (!Array.isArray(S[kind]) || !S[kind].length) S[kind] = menuOf(S, kind).map(x => ({...x})); return S[kind] }
+function renderMenuEd() {
+  for (const kind of ["cats", "occs"]) {
+    const list = menuOf(S, kind);
+    $(MENU[kind][0]).innerHTML = list.map((x, i) => { const n = menuUse(kind, x.k), on = !x.hidden, id = `m_${kind}_${i}`;
+      return `<div class="mrow${on ? "" : " off"}" data-kind="${kind}" data-i="${i}">
+        <input data-mname value="${esc(x.l)}" maxlength="30" aria-label="${MENU[kind][1]} name">
+        <span class="sub">${n} product${n === 1 ? "" : "s"}</span>
+        <label class="switch" for="${id}"><input type="checkbox" id="${id}" data-mshow${on ? " checked" : ""}><span class="knob" aria-hidden="true"></span><span class="st">${on ? "Shown" : "Hidden"}</span></label>
+        <button class="sm" type="button" data-mup${i ? "" : " disabled"} aria-label="Move up">↑</button>
+        <button class="sm red" type="button" data-mdel${n ? ` disabled title="Move its products to another ${MENU[kind][1]} first"` : ""} aria-label="Remove">×</button>
+      </div>` }).join("");
+  }
+}
+function menuChanged() { applyMenu(S, true); fillMenuSelects(); renderList(); renderSlideEd(); const po = getPath(S, "promo.occ"); $("b-po").value = po || ""; changed() }
+$("menuBox").addEventListener("input", e => {
+  const row = e.target.closest(".mrow"); if (!row) return; const x = menuList(row.dataset.kind)[+row.dataset.i];
+  if (e.target.matches("[data-mname]")) { const v = e.target.value.trim(); if (v) { x.l = v; applyMenu(S, true); fillMenuSelects(); renderList(); changed() } }
+  if (e.target.matches("[data-mshow]")) { x.hidden = !e.target.checked; row.classList.toggle("off", x.hidden); row.querySelector(".switch .st").textContent = x.hidden ? "Hidden" : "Shown"; menuChanged() }
+});
+$("menuBox").addEventListener("click", e => {
+  const add = e.target.closest("[data-madd]");
+  if (add) { const kind = add.dataset.madd, list = menuList(kind), base = "new-" + MENU[kind][1];
+    let k = base, n = 2; while (list.some(x => x.k === k)) k = base + "-" + n++;
+    list.push({k, l: "New " + MENU[kind][1]}); renderMenuEd(); menuChanged();
+    const inp = $(MENU[kind][0]).querySelector(".mrow:last-child [data-mname]"); inp.focus(); inp.select(); return }
+  const row = e.target.closest(".mrow"); if (!row) return; const kind = row.dataset.kind, i = +row.dataset.i, list = menuList(kind);
+  if (e.target.closest("[data-mup]") && i > 0) { [list[i - 1], list[i]] = [list[i], list[i - 1]]; renderMenuEd(); menuChanged() }
+  if (e.target.closest("[data-mdel]") && !menuUse(kind, list[i].k)) { list.splice(i, 1); renderMenuEd(); menuChanged() }
+});
+$("menuBox").addEventListener("change", e => { if (e.target.matches("[data-mname]")) { const row = e.target.closest(".mrow"), x = menuList(row.dataset.kind)[+row.dataset.i]; if (!e.target.value.trim()) e.target.value = x.l; menuChanged() } });
 
 function warns() {
   const r = S.reg || {}; $("regWarn").hidden = !!(r.business || r.regNo || r.ntn);
@@ -795,7 +833,7 @@ function warns() {
   $("shopName").innerHTML = wordmark(S.shop.name);
 }
 $("areasBox").addEventListener("input", () => { S.shop.areas = [...new Set($("areasBox").value.split("\n").map(a => a.trim()).filter(Boolean))]; changed() });
-function fillBinds() { setTimeout(() => renderAdv(S.shop.advancePct), 0); $("areasBox").value = shopAreas(S).join("\n"); M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); warns() }
+function fillBinds() { setTimeout(() => renderAdv(S.shop.advancePct), 0); $("areasBox").value = shopAreas(S).join("\n"); M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); renderMenuEd(); warns() }
 function fillThumbs() { M.querySelectorAll("[data-thumb]").forEach(el => { const v = getPath(S, el.dataset.thumb); el.innerHTML = v ? `<img src="${esc(photoSrc(v))}" alt="">` : "—" }) }
 function changed() { warns(); markDirty() }
 /* Advance setting: quick choices, and a plain sentence saying what customers will see. */
@@ -879,7 +917,7 @@ $("pList").addEventListener("click", e => {
   else if (b.dataset.del != null) { if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Confirm?"; return }
     S.products.splice(+b.dataset.del, 1); $("pEditor").hidden = true; editing = null; afterP(); toast("Product deleted. Publish to make it live.") }
 });
-function afterP() { renderList(); changed() }
+function afterP() { renderList(); renderMenuEd(); changed() }
 function setDrop(src) { $("pDrop").querySelector("img")?.remove(); $("pDropTxt").hidden = !!src;
   if (src) { const im = document.createElement("img"); im.src = src; im.alt = ""; $("pDrop").appendChild(im) } }
 function openEditor(i) {

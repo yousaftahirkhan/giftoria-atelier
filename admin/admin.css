@@ -357,3 +357,14 @@ body.admin .sm{min-height:40px}
 .adv-chips{margin-top:-2px}
 .adv-chips .chip{min-height:40px}
 #advNow{color:var(--ink);font-weight:600}
+/* menu editor */
+.menu-ed{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.me-col{display:flex;flex-direction:column;gap:6px;min-width:0}
+.me-col>.sm{align-self:start;margin-top:6px}
+.me-h{font-size:14px}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto 40px 40px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.mrow .sub{white-space:nowrap}
+.mrow .sm{justify-content:center;padding:0;min-width:40px}
+.mrow.off [data-mname]{opacity:.55}
+@media (max-width:760px){.menu-ed{grid-template-columns:1fr}}
+@media (max-width:420px){.mrow{grid-template-columns:minmax(0,1fr) 40px 40px}.mrow .sub{display:none}.mrow .switch{grid-column:1/-1;grid-row:2}}

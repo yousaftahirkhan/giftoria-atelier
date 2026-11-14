@@ -66,9 +66,12 @@ $("dots").addEventListener("click",e=>{const d=e.target.closest("[data-dot]"),s=
 const OCC_ART={birthday:{kind:"bouquet",shape:"daisy",colors:["#F28AB2","#F9DD8C","#A9D6F5","#F28AB2","#F9DD8C"],wrap:"#FFF4F7"},eid:{kind:"bouquet",shape:"mix",colors:["#BFE3D0","#F9DD8C","#FFFFFF","#BFE3D0"],wrap:"#E7F2EA"},
   shaadi:{kind:"gajra",colors:["#FFFFFF","#F28AB2"]},anniversary:{kind:"bouquet",shape:"rose",colors:["#D3304F","#E0485F","#D3304F"],wrap:"#FFF4F7"},
   graduation:{kind:"bouquet",shape:"sun",colors:["#F5B823","#F7C948","#F5B823"],wrap:"#EFE3D0"},love:{kind:"box",colors:["#D3304F","#E0485F"],box:"#2B2B33"}};
+/* Only categories and occasions that have products are offered to customers. */
+const liveCats=()=>CATS.filter(([k])=>S.products.some(p=>p.cat===k));
+const liveOccs=()=>OCCS.filter(([k])=>S.products.some(p=>(p.occ||[]).includes(k)));
 function renderOccasions(){
   const used=new Set();
-  $("occs").innerHTML=OCCS.map(([k,l])=>{const n=S.products.filter(p=>(p.occ||[]).includes(k)).length;
+  $("occs").innerHTML=liveOccs().map(([k,l])=>{const n=S.products.filter(p=>(p.occ||[]).includes(k)).length;
     const cands=S.products.filter(p=>(p.occ||[]).includes(k)&&p.photo);const ph=cands.find(p=>!used.has(p.id))||cands[0];if(ph)used.add(ph.id);
     return `<button class="occ" data-goshop="all" data-goocc="${k}"><div class="arch">${ph?`<img src="${esc(photoSrc(ph.photo))}" alt="" loading="lazy">${ph.sample?SAMPLE_TAG:""}`:drawArt(OCC_ART[k])}</div><b>${l}</b><span>${n} items</span></button>`}).join("");
 }
@@ -84,8 +87,8 @@ function renderPromo(){
     <div class="img">${refImg(p,p.title,drawArt(OCC_ART[p.occ]||DEFAULT_ART.bouquet),' loading="lazy" decoding="async"')}</div>`:"";
 }
 function renderShop(){
-  $("catChips").innerHTML=[["all","All"],...CATS].map(([k,l])=>`<button class="chip" data-cat="${k}" aria-pressed="${F.cat===k}">${l}</button>`).join("");
-  $("occSel").innerHTML=`<option value="">All occasions</option>`+OCCS.map(([k,l])=>`<option value="${k}"${F.occ===k?" selected":""}>${l}</option>`).join("");
+  $("catChips").innerHTML=[["all","All"],...liveCats()].map(([k,l])=>`<button class="chip" data-cat="${k}" aria-pressed="${F.cat===k}">${l}</button>`).join("");
+  $("occSel").innerHTML=`<option value="">All occasions</option>`+liveOccs().map(([k,l])=>`<option value="${k}"${F.occ===k?" selected":""}>${l}</option>`).join("");
   const q=F.q.toLowerCase();
   let list=S.products.filter(p=>(F.cat==="all"||p.cat===F.cat)&&(!F.occ||(p.occ||[]).includes(F.occ))&&(!q||(p.name+" "+(p.spec||"")+" "+(p.desc||"")+" "+(CATN[p.cat]||"")).toLowerCase().includes(q)));
   if(F.sort==="new")list.sort((a,b)=>(b.added||0)-(a.added||0));
@@ -118,7 +121,7 @@ function renderCategories(){
 function renderMenu(){
   const cats=catInfo();
   $("menuCats").innerHTML=cats.map(c=>`<button type="button" class="menu-cat" data-goshop="${c.k}" data-goocc=""><span class="th">${catPic(c)}</span><span class="t"><b>${esc(c.l)}</b><span>${c.n} item${c.n>1?"s":""}${c.from?" · from "+rs(c.from):""}</span></span><span class="go">›</span></button>`).join("");
-  $("menuOccs").innerHTML=OCCS.map(([k,l])=>`<button class="chip" type="button" data-goshop="all" data-goocc="${k}">${l}</button>`).join("");
+  $("menuOccs").innerHTML=liveOccs().map(([k,l])=>`<button class="chip" type="button" data-goshop="all" data-goocc="${k}">${l}</button>`).join("");
   $("megaGrid").innerHTML=cats.map(c=>`<button type="button" class="mega-tile" data-goshop="${c.k}" data-goocc=""><span class="th">${catPic(c)}</span><b>${esc(c.l)}</b><span>${c.n} item${c.n>1?"s":""}</span></button>`).join("")
     +`<a class="mega-tile" href="${esc(customWa())}" target="_blank" rel="noopener"><span class="th custom">+</span><b>Custom design</b><span>Ask on WhatsApp</span></a>`;
   $("menuWa").href="https://wa.me/"+intl(S.shop.wa)+"?text="+encodeURIComponent("Hello! I have a question about "+(S.shop.name||"your shop")+".");
@@ -131,7 +134,7 @@ $("menuDrawer").addEventListener("click",e=>{const m=e.target.closest("[data-men
   if(k==="orders")return show($("ordersDrawer"));if(k==="wish")return show($("wishDrawer"));
   show(null);$(k==="howto"?"howto":"contact").scrollIntoView({behavior:"smooth"})});
 
-function renderRail(){$("rail").innerHTML=CATS.map(([k,l])=>`<button data-goshop="${k}" data-goocc="">${l}</button>`).join("")+OCCS.slice(0,3).map(([k,l])=>`<button data-goshop="all" data-goocc="${k}">${l}</button>`).join("")}
+function renderRail(){$("rail").innerHTML=liveCats().map(([k,l])=>`<button data-goshop="${k}" data-goocc="">${l}</button>`).join("")+liveOccs().slice(0,3).map(([k,l])=>`<button data-goshop="all" data-goocc="${k}">${l}</button>`).join("")}
 function renderGallery(){
   const g=S.gallery||[];$("gallerySec").hidden=!g.length;
   $("gallery").innerHTML=g.map(ph=>`<div><img src="${esc(photoSrc(ph))}" alt="A recent order" loading="lazy"></div>`).join("");
@@ -166,7 +169,7 @@ function renderChrome(){
   $("waFloat").href=wa;$("waFloat").hidden=!intl(s.wa);
   const soc=[["insta","Instagram"],["fb","Facebook"],["tiktok","TikTok"]].filter(([k])=>safeUrl(S.social[k]));
   $("social").innerHTML=soc.map(([k,l])=>`<a href="${esc(safeUrl(S.social[k]))}" target="_blank" rel="noopener">${l}</a>`).join("")+(intl(s.wa)?`<a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>`:"");
-  $("footCats").innerHTML=CATS.map(([k,l])=>`<li><button class="fl" data-goshop="${k}" data-goocc="">${l}</button></li>`).join("");
+  $("footCats").innerHTML=liveCats().map(([k,l])=>`<li><button class="fl" data-goshop="${k}" data-goocc="">${l}</button></li>`).join("");
   const fc=[];if(s.wa)fc.push("WhatsApp: "+s.wa);if(s.phone)fc.push("Call: "+s.phone);if(s.email)fc.push(s.email);if(s.address)fc.push(s.address);if(s.hours)fc.push(s.hours);
   $("footContact").innerHTML=fc.map(x=>`<li>${esc(x)}</li>`).join("")||`<li>${esc(s.city||"")}</li>`;
   const r=S.reg||{};
@@ -477,7 +480,7 @@ function renderSchema(){
 /* ---------- start: load the published shop data ---------- */
 (async()=>{
   try{
-    S=normalizeShop(await (window.__shop||fetch("data/shop.json?v="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})));
+    S=normalizeShop(await (window.__shop||fetch("data/shop.json?v="+Date.now(),{cache:"no-store"}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})));applyMenu(S);
   }catch(e){$("loader").hidden=true;$("loadErr").hidden=false;return}
   $("loader").hidden=true;$("app").hidden=false;
   renderAll();renderSchema();

@@ -6,6 +6,16 @@ const CATS = [["bouquet","Bouquets"],["box","Flower boxes"],["choco","Chocolate 
 const CATN = Object.fromEntries(CATS);
 const OCCS = [["birthday","Birthday"],["eid","Eid"],["shaadi","Weddings & mehndi"],["anniversary","Anniversary"],["graduation","Graduation"],["love","For someone special"]];
 const OCCN = Object.fromEntries(OCCS);
+/* The menu: in the admin the owner can add, rename, reorder and hide categories and occasions (shop.json cats/occs).
+   The shared lists above are the starting set; applyMenu refills them from the shop data once it has loaded. */
+const DEFAULT_CATS = CATS.map(x => x.slice()), DEFAULT_OCCS = OCCS.map(x => x.slice());
+const menuOf = (S, kind) => { const src = S[kind]; return Array.isArray(src) && src.length ? src.filter(x => x && x.k && x.l) : (kind === "cats" ? DEFAULT_CATS : DEFAULT_OCCS).map(([k, l]) => ({k, l})) };
+function applyMenu(S, withHidden) {
+  [[CATS, CATN, "cats"], [OCCS, OCCN, "occs"]].forEach(([arr, names, kind]) => {
+    arr.length = 0; for (const k in names) delete names[k];
+    menuOf(S, kind).forEach(x => { names[x.k] = x.l; if (withHidden || !x.hidden) arr.push([x.k, x.l]) });
+  });
+}
 
 /* Every section the shop data can hold, so a missing one never breaks a page. */
 const SHOP_DEFAULTS = {shop:{name:"Shop",city:"",wa:"",delLocal:0,freeAbove:0,advancePct:50},reg:{},social:{},pay:{},slides:[],promo:{},about:{},policies:{},addons:[],reviews:[],gallery:[],products:[]};

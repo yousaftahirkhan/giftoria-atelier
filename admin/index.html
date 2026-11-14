@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=vbg1">
-<link rel="stylesheet" href="admin.css?v=vbg1">
+<link rel="stylesheet" href="../assets/base.css?v=vmenu1">
+<link rel="stylesheet" href="admin.css?v=vmenu1">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="admin">
@@ -187,6 +187,14 @@
           <button class="btn dark" type="button" id="pNewBtn">+ New product</button>
         </div>
         <div id="pList"></div>
+      </div>
+      <div class="box" id="menuBox">
+        <h3>Menu: categories and occasions</h3>
+        <p class="hint">These are the website's menu, category tiles and filters. Each one shows on the website once at least one product uses it. Rename them, change the order with ↑, or switch one off to hide it. Then select <b>Publish changes</b>.</p>
+        <div class="menu-ed">
+          <div class="me-col"><b class="me-h">Categories</b><div id="mCats"></div><button class="sm" type="button" data-madd="cats">+ Add category</button></div>
+          <div class="me-col"><b class="me-h">Occasions</b><div id="mOccs"></div><button class="sm" type="button" data-madd="occs">+ Add occasion</button></div>
+        </div>
       </div>
     </div>
 
@@ -380,8 +388,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js?v=vbg1"></script>
-<script src="config.js?v=vbg1"></script>
-<script src="admin.js?v=vbg1"></script>
+<script src="../assets/common.js?v=vmenu1"></script>
+<script src="config.js?v=vmenu1"></script>
+<script src="admin.js?v=vmenu1"></script>
 </body>
 </html>
