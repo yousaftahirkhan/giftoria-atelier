@@ -8,11 +8,12 @@
 <title>Super Admin | Giftoria Atelier</title>
 <meta name="theme-color" content="#1E2E29">
 <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=vtabs1">
-<link rel="stylesheet" href="admin.css?v=vtabs1">
+<link rel="stylesheet" href="../assets/base.css?v=vlaunch1">
+<link rel="stylesheet" href="admin.css?v=vlaunch1">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="admin">
@@ -294,6 +295,7 @@
     <!-- Payment & delivery -->
     <div class="panel" id="tab-pay" hidden>
       <div class="banner warn" id="payWarn">Payment accounts are blank. Add JazzCash, Easypaisa or bank details so customers can pay the advance.</div>
+      <div class="banner warn" id="advWarn" hidden>Your top bar or policies still mention <b id="advWarnTxt"></b>, but the advance is set to <b id="advWarnNow"></b>. Update them in <button class="link" type="button" data-goto="home">Homepage</button> and <button class="link" type="button" data-goto="business">Business info</button> so customers see one clear amount.</div>
       <div class="banner warn" id="titleWarn" hidden>Add the account title for <b id="titleWarnList"></b>. Customers check this name in their payment app before they send money, so a matching name builds trust.</div>
       <div class="box">
         <h3>Advance payment</h3>
@@ -388,8 +390,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js?v=vtabs1"></script>
-<script src="config.js?v=vtabs1"></script>
-<script src="admin.js?v=vtabs1"></script>
+<script src="../assets/common.js?v=vlaunch1"></script>
+<script src="config.js?v=vlaunch1"></script>
+<script src="admin.js?v=vlaunch1"></script>
 </body>
 </html>

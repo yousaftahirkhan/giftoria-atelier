@@ -832,6 +832,10 @@ $("menuBox").addEventListener("change", e => { if (e.target.matches("[data-mname
 function warns() {
   const r = S.reg || {}; $("regWarn").hidden = !!(r.business || r.regNo || r.ntn);
   $("payWarn").hidden = !(+S.shop.advancePct) || payAccounts(S).length > 0;
+  /* percentages written in the top bar or policies that no longer match the advance setting */
+  const pct = Math.round(+S.shop.advancePct || 0), txt = [S.shop.announce, ...Object.values(S.policies || {})].join(" ");
+  const odd = [...new Set([...txt.matchAll(/(\d{1,3})\s?%/g)].map(m => +m[1]).filter(n => n !== pct && n !== 100 - pct))];
+  $("advWarn").hidden = !odd.length; $("advWarnTxt").textContent = odd.map(n => n + "%").join(" and "); $("advWarnNow").textContent = pct ? pct + "%" : "cash on delivery";
   const noTitle = [...new Set((S.pay.accounts || []).filter(a => a && a.active !== false && String(a.number || "").trim() && !String(a.title || "").trim()).map(a => a.method || "a payment method"))];
   $("titleWarn").hidden = !noTitle.length; $("titleWarnList").textContent = noTitle.join(" and ");
   $("exampleNote").hidden = !S.products.some(p => p.sample || (!p.photo && p.art));
