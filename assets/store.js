@@ -23,13 +23,26 @@ const refImg=(o,alt,fallback,attrs)=>{const r=refPhoto(o);return r?`<img src="${
 function card(p){
   const inW=wish.includes(p.id);
   const badge=p.soldOut?`<span class="badge out">Sold out</span>`:p.was>p.price?`<span class="badge sale">${Math.round((1-p.price/p.was)*100)}% off</span>`:p.isNew?`<span class="badge new">New</span>`:p.best?`<span class="badge best">Bestseller</span>`:"";
-  return `<article class="card">
+  return `<article class="card" data-pid="${esc(p.id)}">
     <div style="position:relative"><button class="pic" data-qv="${esc(p.id)}" aria-label="View ${esc(p.name)}">${visual(p)}</button>${badge}${p.photo&&p.sample?SAMPLE_TAG:""}
     <button class="heart" data-wish="${esc(p.id)}" aria-pressed="${inW}" aria-label="Wishlist">${inW?"♥":"♡"}</button></div>
     <div class="body"><span class="cat">${esc(CATN[p.cat]||"")}</span><h3><button class="ttl" type="button" data-qv="${esc(p.id)}">${esc(p.name)}</button></h3><span class="sub">${esc(p.spec)}</span>
       <div class="prices"><span class="price">${rs(p.price)}</span>${p.was>p.price?`<span class="was">${rs(p.was)}</span>`:""}</div></div>
-    <div class="acts">${p.soldOut?`<button class="add" disabled>Sold out</button>`:cart[p.id]?`<div class="stepper" role="group" aria-label="Quantity of ${esc(p.name)}"><button type="button" data-step-id="${esc(p.id)}" data-step-d="-1" aria-label="Remove one">−</button><span>${cart[p.id]} in cart</span><button type="button" data-step-id="${esc(p.id)}" data-step-d="1" aria-label="Add one">+</button></div>`:`<button class="add" data-add="${esc(p.id)}">Add to cart</button>`}<button class="qv" data-qv="${esc(p.id)}">View</button></div>
+    <div class="acts">${actsHtml(p)}</div>
   </article>`;
+}
+const actsHtml=p=>(p.soldOut?`<button class="add" disabled>Sold out</button>`:cart[p.id]?`<div class="stepper" role="group" aria-label="Quantity of ${esc(p.name)}"><button type="button" data-step-id="${esc(p.id)}" data-step-d="-1" aria-label="Remove one">−</button><span aria-live="polite">${cart[p.id]} in cart</span><button type="button" data-step-id="${esc(p.id)}" data-step-d="1" aria-label="Add one">+</button></div>`:`<button class="add" data-add="${esc(p.id)}">Add to cart</button>`)+`<button class="qv" data-qv="${esc(p.id)}">View</button>`;
+/* After a tap on Add to cart, + / − or the heart, only that product's cards change. Nothing else on the page is
+   redrawn, so the page and the sideways rows stay exactly where the customer is (important on iPhones). */
+function refreshItem(id){
+  const p=findP(id);
+  if(p)document.querySelectorAll(`.card[data-pid="${CSS.escape(id)}"]`).forEach(c=>{
+    const had=c.querySelector(".acts").contains(document.activeElement),wasStep=!!(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.stepD);
+    c.querySelector(".acts").innerHTML=actsHtml(p);
+    const h=c.querySelector(".heart"),w=wish.includes(id);h.setAttribute("aria-pressed",String(w));h.textContent=w?"♥":"♡";
+    if(had){const b=c.querySelector(wasStep?"[data-step-d=\"1\"]":"[data-step-d=\"1\"],[data-add]");if(b)b.focus({preventScroll:true})}
+  });
+  renderCart();renderWish();if(!$("qvModal").hidden&&qvId)openQV(qvId,true);
 }
 let slideI=0,slideT=null;
 function renderHero(){
@@ -173,9 +186,9 @@ function renderAll(){renderChrome();renderRail();renderCategories();renderMenu()
 document.addEventListener("click",e=>{
   const a=e.target.closest("[data-add]"),w=e.target.closest("[data-wish]"),q=e.target.closest("[data-qv]"),g=e.target.closest("[data-goshop]"),pol=e.target.closest("[data-policy]");
   const stp=e.target.closest("[data-step-id]");
-  if(stp){const id=stp.dataset.stepId;cart[id]=(cart[id]||0)+ +stp.dataset.stepD;if(cart[id]<=0){delete cart[id];toast("Removed from cart")}persist();refreshProducts();return}
-  if(a){const p=findP(a.dataset.add);if(!p||p.soldOut)return;cart[p.id]=(cart[p.id]||0)+1;persist();refreshProducts();toast(p.name+" added to cart");return}
-  if(w){const id=w.dataset.wish;wish=wish.includes(id)?wish.filter(x=>x!==id):[...wish,id];persist();refreshProducts();toast(wish.includes(id)?"Saved to wishlist":"Removed from wishlist");return}
+  if(stp){const id=stp.dataset.stepId;cart[id]=(cart[id]||0)+ +stp.dataset.stepD;if(cart[id]<=0){delete cart[id];toast("Removed from cart")}persist();refreshItem(id);return}
+  if(a){const p=findP(a.dataset.add);if(!p||p.soldOut)return;cart[p.id]=(cart[p.id]||0)+1;persist();refreshItem(p.id);toast(p.name+" added to cart");return}
+  if(w){const id=w.dataset.wish;wish=wish.includes(id)?wish.filter(x=>x!==id):[...wish,id];persist();refreshItem(id);toast(wish.includes(id)?"Saved to wishlist":"Removed from wishlist");return}
   if(q){openQV(q.dataset.qv);return}
   if(g){goShop(g.dataset.goshop,g.dataset.goocc);return}
   if(pol){openPolicy(pol.dataset.policy)}
@@ -244,9 +257,9 @@ function renderCart(){
   $("tRestRow").hidden=!(t.pct&&t.rest>0);$("tRest").textContent=rs(t.rest);
 }
 $("lines").addEventListener("click",e=>{const rm=e.target.closest("button[data-rm]");
-  if(rm){const p=findP(rm.dataset.rm);delete cart[rm.dataset.rm];persist();refreshProducts();toast((p?p.name:"Item")+" removed from cart");return}
+  if(rm){const p=findP(rm.dataset.rm);delete cart[rm.dataset.rm];persist();refreshItem(rm.dataset.rm);toast((p?p.name:"Item")+" removed from cart");return}
   const b=e.target.closest("button[data-d]");if(!b)return;const id=b.dataset.id;
-  cart[id]+=+b.dataset.d;if(cart[id]<=0)delete cart[id];persist();refreshProducts()});
+  cart[id]+=+b.dataset.d;if(cart[id]<=0)delete cart[id];persist();refreshItem(id)});
 $("addonBox").addEventListener("change",e=>{const c=e.target.closest("[data-ad]");if(!c)return;addSel[c.dataset.ad]=c.checked;renderCart()});
 {const d=load("gd-cust",{});["fName","fPhone","fAddr"].forEach(k=>{if(d[k])$(k).value=d[k]})}
 
