@@ -244,7 +244,7 @@ let ME = "";
 function renderMe() { const m = ME || "Owner"; $("meMail").textContent = m; $("meMail2").textContent = "Signed in as " + m; $("meAv").textContent = (m.replace(/[^A-Za-z]/g, "")[0] || "G").toUpperCase() }
 
 /* ---------- new order alerts ----------
-   Orders are checked every 20 seconds (every minute while the tab is in the background). An order this device has
+   Orders are checked every 20 seconds, also while the tab is in the background (browsers may slow this to once a minute after a few minutes). An order this device has
    not seen yet plays a two-note chime, shows a banner and puts the count in the tab title; when the page is not in
    front, a desktop notification can show too. Browsers allow sound only after the first tap on the page, so the
    bell shows a dot until then. */
@@ -346,7 +346,7 @@ function setLive(on, why) {
   $("liveSt").classList.toggle("off", !on); $("liveTxt").textContent = on ? "Live" : "Offline";
   $("liveSt").title = on ? "Checked for new orders at " + new Date().toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"}) + ". It checks every 20 seconds." : (why || "Orders could not be checked");
 }
-function poll() { clearTimeout(pollT); pollT = setTimeout(async () => { if (TOKEN && ORDERS_OK && !ordersBusy) await loadOrders(); refreshTimes(); poll() }, document.hidden ? 60e3 : POLL_MS) }
+function poll() { clearTimeout(pollT); pollT = setTimeout(async () => { if (TOKEN && ORDERS_OK && !ordersBusy) await loadOrders(); refreshTimes(); poll() }, POLL_MS) }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && TOKEN && ORDERS_OK && !$("app").hidden) { loadOrders(); poll() } });
 
 /* =====================================================================
