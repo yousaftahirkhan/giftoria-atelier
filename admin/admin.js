@@ -227,6 +227,11 @@ function selectTab(t) {
 }
 document.addEventListener("click", e => { const g = e.target.closest("[data-goto]"); if (g && TABS.includes(g.dataset.goto)) selectTab(g.dataset.goto) });
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => selectTab(b.dataset.tab));
+/* The orders' status tabs stay pinned just below the top bar; its height changes with the screen, so it is measured. */
+{ const tb = document.querySelector(".topbar"), setH = () => document.documentElement.style.setProperty("--tb-h", tb.offsetHeight + "px");
+  if (window.ResizeObserver) new ResizeObserver(setH).observe(tb); addEventListener("resize", setH); setH();
+  const bar = document.querySelector(".segbar");
+  addEventListener("scroll", () => bar.classList.toggle("stuck", bar.getBoundingClientRect().top <= tb.offsetHeight + 1 && scrollY > 0), {passive: true}) }
 
 /* ---------- menus, dialogs, signed-in account ---------- */
 function closePops() { [["alertPop", "bellBtn"], ["morePop", "moreBtn"]].forEach(([p, b]) => { $(p).hidden = true; $(b).setAttribute("aria-expanded", "false") }) }
