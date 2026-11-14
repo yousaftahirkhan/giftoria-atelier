@@ -151,7 +151,7 @@ function renderStory(){
 }
 function renderChrome(){
   const s=S.shop,pct=+s.advancePct||0;
-  document.title=(s.name||"Shop")+" | Handmade flowers and gifts";
+  document.title=(s.name||"Shop")+" | Handmade flowers and gifts in "+(s.city||"Multan");
   $("announce").textContent=s.announce||"";$("announce").parentElement.hidden=!s.announce;
   $("shopName").innerHTML=wordmark(s.name);$("footName").innerHTML=wordmark(s.name);
   $("footAbout").textContent=s.footAbout||"";
@@ -464,7 +464,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){show(null);closeMeg
    Products are listed only once they have a real photo (AI sample photos are left out). */
 function renderSchema(){
   const s=S.shop,base="https://giftoria-atelier.pages.dev/",soc=["insta","fb","tiktok"].map(k=>safeUrl(S.social[k])).filter(Boolean);
-  const biz={"@context":"https://schema.org","@type":"Florist","name":s.name,"url":base,"logo":base+"assets/icon-512.png","image":base+"assets/share.jpg",
+  const biz={"@context":"https://schema.org","@type":"Florist","@id":base+"#business","name":s.name,"url":base,"logo":base+"assets/icon-512.png","image":base+"assets/share.jpg",
     "description":s.footAbout||"","address":{"@type":"PostalAddress","addressLocality":s.city||"Multan","addressCountry":"PK",...(s.address?{"streetAddress":s.address}:{})},
     "areaServed":{"@type":"City","name":s.city||"Multan"},"currenciesAccepted":"PKR",...(payAccounts(S).length?{"paymentAccepted":payAccounts(S).map(a=>a.k).join(", ")}:{}),
     ...(intl(s.wa)?{"telephone":"+"+intl(s.wa)}:{}),...(s.email?{"email":s.email}:{}),...(soc.length?{"sameAs":soc}:{})};
