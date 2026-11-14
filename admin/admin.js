@@ -256,12 +256,14 @@ function audio() { if (!actx && AC) { try { actx = new AC() } catch (e) { actx =
 const audioBlocked = () => soundOn && !!AC && (!actx || actx.state !== "running");
 function unlockAudio() { if (!soundOn || (actx && actx.state === "running")) return; const a = audio(); if (a) a.resume().then(() => { renderBell(); renderAlert() }, () => {}) }
 ["pointerdown", "keydown", "touchend"].forEach(ev => document.addEventListener(ev, unlockAudio, {capture: true, passive: true}));
-/* A soft two-note bell, played twice (about two seconds). */
+/* A clear three-note bell, played twice (about two seconds). A compressor makes it loud without crackling. */
 function chime(force) {
   if (!soundOn && !force) return false;
   const a = audio(); if (!a || a.state !== "running") return false;
-  const t0 = a.currentTime + .04, out = a.createGain(); out.gain.value = .6; out.connect(a.destination);
-  [[0, 880], [.14, 1318.5], [.66, 880], [.8, 1318.5]].forEach(([d, f]) => [[1, .42, 1.1], [2, .1, .5], [3, .04, .3]].forEach(([h, v, len]) => {
+  const t0 = a.currentTime + .04, out = a.createGain(), comp = a.createDynamicsCompressor();
+  comp.threshold.value = -18; comp.knee.value = 6; comp.ratio.value = 6; comp.attack.value = .003; comp.release.value = .2;
+  out.gain.value = 1.6; out.connect(comp); comp.connect(a.destination);
+  [[0, 880], [.13, 1108.7], [.26, 1318.5], [.78, 880], [.91, 1108.7], [1.04, 1318.5]].forEach(([d, f]) => [[1, .9, 1.0], [2, .28, .5], [3, .12, .3]].forEach(([h, v, len]) => {
     const o = a.createOscillator(), g = a.createGain(), st = t0 + d;
     o.type = "sine"; o.frequency.value = f * h;
     g.gain.setValueAtTime(.0001, st); g.gain.exponentialRampToValueAtTime(v, st + .015); g.gain.exponentialRampToValueAtTime(.0001, st + len);
@@ -270,6 +272,15 @@ function chime(force) {
   return true;
 }
 /* Phones vibrate too, once the page has been tapped (browsers block it before that). */
+/* A new order keeps ringing every 5 seconds until it is opened (View order, the banner's ×, or any tap on the order),
+   for at most 2 minutes. After that it waits quietly in the list to be handled by hand. */
+const RING_MS = 120e3, RING_EVERY = 5e3;
+let ringT = null, ringUntil = 0;
+const RINGING = new Set();
+function startRing(nos) { nos.forEach(n => RINGING.add(n)); ringUntil = Date.now() + RING_MS; if (!ringT) ringT = setInterval(ringTick, RING_EVERY); renderAlert() }
+function pruneRing() { for (const n of [...RINGING]) { const o = ORDERS.find(x => x.no === n); if (!o || (SEEN && SEEN.has(n)) || !ACTIVE.includes(o.status)) RINGING.delete(n) } if (!RINGING.size) stopRing() }
+function stopRing() { if (ringT) clearInterval(ringT); ringT = null; RINGING.clear(); renderAlert() }
+function ringTick() { pruneRing(); if (!ringT) return; if (Date.now() > ringUntil) { stopRing(); return } chime(); buzz() }
 function buzz() { try { if (navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive) navigator.vibrate([180, 90, 180]) } catch (e) {} }
 function notifyDesktop(list) {
   if (!("Notification" in window) || Notification.permission !== "granted" || (!document.hidden && document.hasFocus())) return;
@@ -283,7 +294,7 @@ const unseen = () => SEEN ? ORDERS.filter(o => !SEEN.has(o.no) && ACTIVE.include
 function markSeen(nos) {
   if (!SEEN) return; let ch = false;
   nos.forEach(n => { if (n && !SEEN.has(n)) { SEEN.add(n); ch = true } });
-  if (!ch) return; saveSeen(); renderAlert();
+  if (!ch) return; saveSeen(); pruneRing(); renderAlert();
   nos.forEach(n => { const c = cardEl(n); if (c) { c.classList.remove("is-new"); const t = c.querySelector(".t-new"); if (t) t.remove() } });
 }
 /* Called after every load: the first time on a new device, everything already there counts as seen. */
@@ -292,7 +303,7 @@ function noticeNew() {
   const fresh = unseen().filter(o => !ALERTED.has(o.no));
   fresh.forEach(o => ALERTED.add(o.no));
   renderAlert();
-  if (fresh.length) { chime(); buzz(); notifyDesktop(fresh) }
+  if (fresh.length) { chime(); buzz(); notifyDesktop(fresh); startRing(fresh.map(o => o.no)) }
 }
 function renderAlert() {
   const list = unseen(), n = list.length;
@@ -302,7 +313,7 @@ function renderAlert() {
   $("newAlert").innerHTML = `<span class="na-ic">${SVG_BELL}</span>
     <div class="na-t"><b>${n > 1 ? n + " new orders" : "New order " + esc(o.no)}</b>
       <span>${n > 1 ? list.slice(0, 3).map(x => esc(x.no) + " · " + esc(x.name || "Customer")).join("<br>") + (n > 3 ? "<br>…" : "") : `${esc(o.name || "Customer")} · ${rs(o.tot)}${(o.proofs || []).length ? " · payment screenshot attached" : ""}`}</span>
-      ${audioBlocked() ? `<span class="na-snd">Tap anywhere on the page once to allow the alert sound.</span>` : ""}</div>
+      ${audioBlocked() ? `<span class="na-snd">Tap anywhere on the page once to allow the alert sound.</span>` : RINGING.size ? `<span class="na-snd">Ringing until you open it (up to 2 minutes).</span>` : ""}</div>
     <div class="na-a"><button class="btn em md" type="button" data-na="view">View order${n > 1 ? "s" : ""}</button><button class="x" type="button" data-na="hide" aria-label="Dismiss">×</button></div>`;
 }
 function viewNew() {
@@ -316,7 +327,7 @@ function renderBell() {
   const blocked = audioBlocked();
   $("bellBtn").classList.toggle("muted", !soundOn); $("bellDot").hidden = !blocked;
   $("alertSound").checked = soundOn; $("alertSoundSt").textContent = soundOn ? "Sound on" : "Sound off";
-  $("soundHint").textContent = !soundOn ? "New orders will not make a sound." : !AC ? "This browser cannot play the alert sound." : blocked ? "Tap anywhere on this page once so the browser allows the sound." : "A chime plays when a new order arrives.";
+  $("soundHint").textContent = !soundOn ? "New orders will not make a sound." : !AC ? "This browser cannot play the alert sound." : blocked ? "Tap anywhere on this page once so the browser allows the sound." : "A new order rings every 5 seconds until you open it, for up to 2 minutes.";
   const np = "Notification" in window ? Notification.permission : "unsupported";
   $("alertNotif").hidden = np === "unsupported"; $("alertNotif").disabled = np !== "default";
   $("alertNotif").textContent = np === "granted" ? "Notifications are on" : np === "denied" ? "Notifications blocked" : "Turn on notifications";
