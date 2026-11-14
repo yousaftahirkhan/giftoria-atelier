@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Parisienne&family=Figtree:wght@400;600;700;800&display=swap">
-<link rel="stylesheet" href="../assets/base.css?v=vadv1">
-<link rel="stylesheet" href="admin.css?v=vadv1">
+<link rel="stylesheet" href="../assets/base.css?v=vcod1">
+<link rel="stylesheet" href="admin.css?v=vcod1">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="admin">
@@ -289,22 +289,16 @@
       <div class="banner warn" id="titleWarn" hidden>Add the account title for <b id="titleWarnList"></b>. Customers check this name in their payment app before they send money, so a matching name builds trust.</div>
       <div class="box">
         <h3>Advance payment</h3>
-        <label class="fld" for="b-adv">What customers pay when they order
-          <select id="b-adv" data-b="shop.advancePct" data-n>
-            <option value="20">20% advance</option>
-            <option value="25">25% advance</option>
-            <option value="30">30% advance</option>
-            <option value="40">40% advance</option>
-            <option value="50">50% advance (recommended)</option>
-            <option value="60">60% advance</option>
-            <option value="70">70% advance</option>
-            <option value="75">75% advance</option>
-            <option value="80">80% advance</option>
-            <option value="90">90% advance</option>
-            <option value="100">100% upfront (full payment)</option>
-          </select>
+        <label class="fld" for="b-adv">Advance customers pay when they order (%)
+          <input id="b-adv" type="number" inputmode="numeric" min="0" max="100" step="5" data-b="shop.advancePct" data-n>
         </label>
-        <p class="hint">With any advance below 100%, customers pay the rest after you send them a photo of the finished order, before it is sent. The checkout, cart and WhatsApp messages show the amounts automatically.</p>
+        <div class="chips adv-chips" id="advChips">
+          <button class="chip" type="button" data-adv="0">Cash on delivery</button><button class="chip" type="button" data-adv="25">25%</button>
+          <button class="chip" type="button" data-adv="50">50% (recommended)</button><button class="chip" type="button" data-adv="75">75%</button>
+          <button class="chip" type="button" data-adv="100">100% upfront</button>
+        </div>
+        <p class="hint" id="advNow"></p>
+        <p class="hint">Type any number from 0 to 100, or tap a choice. 0 means cash on delivery: customers pay nothing online and pay the full amount in cash when the order arrives. Below 100%, the rest is paid after you send a photo of the finished order. The checkout, cart and WhatsApp messages follow this automatically.</p>
         <p class="hint">Why 50%: most shoppers in Pakistan still prefer cash on delivery because they worry about paying a shop they do not know yet. Half now covers your materials, and the photo before the rest shows them their order is real.</p>
         <p class="hint">Deliveries are booked on inDrive within Multan. Customers pay the rider's fare; it is not added to the order total.</p>
       </div>
@@ -386,8 +380,8 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 
-<script src="../assets/common.js?v=vadv1"></script>
-<script src="config.js?v=vadv1"></script>
-<script src="admin.js?v=vadv1"></script>
+<script src="../assets/common.js?v=vcod1"></script>
+<script src="config.js?v=vcod1"></script>
+<script src="admin.js?v=vcod1"></script>
 </body>
 </html>

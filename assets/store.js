@@ -269,6 +269,7 @@ function orderText(o){
     else L.push(`Advance${o.proof?" paid":""} (${o.pct}%): ${rs(o.adv)}`,`Remaining after the photo: ${rs(o.rest)}`);
     if(o.proof)L.push("Payment screenshot: uploaded with the order");else if(o.proofLater)L.push("Payment screenshot: I will send it in this chat");
   }
+  if(!o.pct)L.push(`Payment: cash on delivery (${rs(o.tot)})`);
   L.push("","*Delivery details*",`Name: ${o.name}`,`Phone: ${o.phone}`,`City: ${o.city}`,...(o.area?[`Area: ${o.area}`]:[]),`Address: ${o.addr}`);
   L.push(`Delivery: by inDrive, fare paid to the rider`);
   if(o.need)L.push(`Needed by: ${o.needTxt||fmtDate(o.need)}`);
@@ -308,7 +309,7 @@ function showPay(){
   if(o.pct)steps.push(["We check your payment","Then we confirm your order on WhatsApp."]);
   steps.push(["We make it by hand",part?"When it is ready, we send you a photo of it.":"Every piece is made to order for you."]);
   if(part)steps.push([`You pay the remaining ${rs(o.rest)}`,"Once you have seen the photo. Then we book your inDrive rider."]);
-  steps.push(["Delivered to your door","An inDrive rider brings it to you. You pay the rider's fare."]);
+  steps.push(["Delivered to your door",o.pct?"An inDrive rider brings it to you. You pay the rider's fare.":`An inDrive rider brings it to you. You pay ${rs(o.tot)} in cash, plus the rider's fare.`]);
   $("nextSteps").innerHTML=steps.map(([b,t])=>`<li><b>${esc(b)}</b><span>${esc(t)}</span></li>`).join("");
   const showAcc=!!(o.pct&&!o.proof&&acc.length);$("accts").hidden=!showAcc;
   $("accts").innerHTML=showAcc?acc.map((a,i)=>`<div class="acct"><div style="min-width:0"><div class="k">${esc(a.k)}</div><div class="v" id="acv${i}">${esc(a.v)}</div>${a.who?`<div class="sub">Account title: <b>${esc(a.who)}</b></div>`:""}</div><button class="sm" type="button" data-cp="${i}">Copy</button></div>`).join(""):"";

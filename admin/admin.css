@@ -354,3 +354,6 @@ body.admin .sm{min-height:40px}
 .qr{display:grid;place-items:center;background:#FFFFFF;border-radius:12px;padding:8px;min-height:120px}
 .qr svg{width:200px;height:200px;max-width:100%}
 .setup code{font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:2px 6px;overflow-wrap:anywhere}
+.adv-chips{margin-top:-2px}
+.adv-chips .chip{min-height:40px}
+#advNow{color:var(--ink);font-weight:600}

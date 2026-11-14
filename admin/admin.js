@@ -353,7 +353,8 @@ const SVG_PHONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const SVG_WA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg>';
 const SVG_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 let ORDERS = [], ordersSha = null, oFilter = "open", parsed = null, ordersBusy = false, ordersLoaded = false, renderPending = false;
-const balanceDue = o => o.rest > 0 && !o.balAt;
+const cod = o => !(o.adv > 0) && o.tot > 0;
+const balanceDue = o => o.rest > 0 && !o.balAt && !cod(o);
 /* What the customer has paid so far (the advance, or everything once the balance is in). Customers pay the advance
    before placing the order, so an order still waiting for the check can already have money attached. */
 const paidSoFar = o => o.balAt ? (o.tot || 0) : (o.adv || 0);
@@ -426,7 +427,7 @@ function statusText(o, status) {
     full: [`${hi} we have received the remaining *${rs(o.rest)}*. Thank you!`, "", id, "Your order is now fully paid. We are booking your inDrive rider and will send you the details shortly."],
     sent: [`${hi} good news! *Your order is ready* and has been handed to our inDrive rider. It is on its way to you.`, "", id,
       ...(o.rider ? ["", "*Rider details*", `Name: ${o.rider.name}`, `Phone: ${o.rider.phone}`, ...(o.rider.vehicle ? [`Vehicle: ${o.rider.vehicle}`] : []), ""] : [""]),
-      balanceDue(o) ? `Remaining to pay: *${rs(o.rest)}*. Please pay it to one of our accounts and send the screenshot here.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.",
+      cod(o) ? `Please pay *${rs(o.tot)}* in cash when you receive your order, plus the inDrive fare.` : balanceDue(o) ? `Remaining to pay: *${rs(o.rest)}*. Please pay it to one of our accounts and send the screenshot here.` : "Your order is fully paid. Please keep the inDrive fare ready for the rider.",
       "Please keep your phone nearby so the rider can reach you.", "", "*Once you receive your order, please reply here to let us know it has reached you safely.*"],
     done: [`${hi} your order has been *delivered*. Thank you for shopping with ${shop}!`, "", id, "We would love to see a photo or hear your feedback. Reply here any time."],
     cancel: [`${hi} we are sorry, your order has been *cancelled*.`, "", id, ...(o.cancelReason ? [`Reason: ${o.cancelReason}`] : []), "",
@@ -470,7 +471,7 @@ function isUrgent(o) {
 }
 function stepsHtml(o) {
   if (o.status === "cancel") return "";
-  const bal = o.rest > 0, names = bal ? ["Payment", "Making", "Balance", "On the way", "Delivered"] : ["Payment", "Making", "On the way", "Delivered"];
+  const bal = o.rest > 0 && !cod(o), names = bal ? ["Payment", "Making", "Balance", "On the way", "Delivered"] : ["Payment", "Making", "On the way", "Delivered"];
   const at = {new: 0, paid: 1, making: 1, ready: 2, full: bal ? 3 : 2, sent: bal ? 3 : 2, done: names.length}[o.status] ?? 0;
   return `<ol class="oc-steps" aria-label="Order progress">${names.map((n, i) => `<li class="${i < at ? "done" : i === at ? "cur" : ""}">${n}</li>`).join("")}</ol>`;
 }
@@ -503,7 +504,8 @@ function payHtml(o) {
   const live = o.status !== "cancel", approved = !["new", "cancel"].includes(o.status);
   const tag = (ok, wait) => !live ? "<span></span>" : ok ? `<i class="ok">Received</i>` : `<i class="wait">${wait}</i>`;
   const rows = [`<div class="pr tot"><span>Total</span><b>${rs(o.tot)}</b><span></span></div>`];
-  if (o.rest > 0) rows.push(`<div class="pr"><span>Advance${o.pct ? ` (${o.pct}%)` : ""}</span><b>${rs(o.adv)}</b>${tag(approved, "To check")}</div>`,
+  if (cod(o)) rows.push(`<div class="pr"><span>Cash on delivery</span><b>${rs(o.tot)}</b>${tag(o.status === "done", "On delivery")}</div>`);
+  else if (o.rest > 0) rows.push(`<div class="pr"><span>Advance${o.pct ? ` (${o.pct}%)` : ""}</span><b>${rs(o.adv)}</b>${tag(approved, "To check")}</div>`,
     `<div class="pr"><span>Balance</span><b>${rs(o.rest)}</b>${tag(!!o.balAt, o.status === "ready" ? "Asked" : "Later")}</div>`);
   else rows.push(`<div class="pr"><span>${o.adv ? "Paid upfront" : "Payment"}</span><b>${rs(o.adv || o.tot)}</b>${tag(approved, "To check")}</div>`);
   if (o.refund > 0) rows.push(`<div class="pr"><span>Refund</span><b>${rs(o.refund)}</b>${o.refundAt ? `<i class="ok">Sent</i>` : `<i class="wait">Due</i>`}</div>`);
@@ -782,12 +784,23 @@ function warns() {
   $("shopName").innerHTML = wordmark(S.shop.name);
 }
 $("areasBox").addEventListener("input", () => { S.shop.areas = [...new Set($("areasBox").value.split("\n").map(a => a.trim()).filter(Boolean))]; changed() });
-function fillBinds() { $("areasBox").value = shopAreas(S).join("\n"); M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); warns() }
+function fillBinds() { setTimeout(() => renderAdv(S.shop.advancePct), 0); $("areasBox").value = shopAreas(S).join("\n"); M.querySelectorAll("[data-b]").forEach(el => { const v = getPath(S, el.dataset.b); if (el.type === "checkbox") el.checked = !!v; else el.value = v == null ? "" : v }); fillThumbs(); renderSlideEd(); renderLists(); renderGalEd(); warns() }
 function fillThumbs() { M.querySelectorAll("[data-thumb]").forEach(el => { const v = getPath(S, el.dataset.thumb); el.innerHTML = v ? `<img src="${esc(photoSrc(v))}" alt="">` : "—" }) }
 function changed() { warns(); markDirty() }
+/* Advance setting: quick choices, and a plain sentence saying what customers will see. */
+function renderAdv(v) {
+  v = Math.min(100, Math.max(0, Math.round(+v || 0)));
+  $("advChips").querySelectorAll("[data-adv]").forEach(c => c.setAttribute("aria-pressed", String(+c.dataset.adv === v)));
+  $("advNow").textContent = v === 0 ? "Now: cash on delivery. Customers pay the full amount in cash when the order arrives."
+    : v === 100 ? "Now: full payment upfront at checkout, with the payment screenshot."
+    : `Now: customers pay ${v}% at checkout with the payment screenshot, and the other ${100 - v}% after they see the photo.`;
+}
+$("advChips").addEventListener("click", e => { const c = e.target.closest("[data-adv]"); if (!c) return; const i = $("b-adv"); i.value = c.dataset.adv; i.dispatchEvent(new Event("input", {bubbles: true})) });
 M.addEventListener("input", e => {
   const el = e.target;
-  if (el.dataset.b) { const v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-n") ? Math.max(0, +el.value || 0) : el.value; setPath(S, el.dataset.b, v); changed(); return }
+  if (el.dataset.b) { let v = el.type === "checkbox" ? el.checked : el.hasAttribute("data-n") ? Math.max(0, +el.value || 0) : el.value;
+    if (el.id === "b-adv") { v = Math.min(100, Math.round(v)); renderAdv(v) }
+    setPath(S, el.dataset.b, v); changed(); return }
   if (el.dataset.qp != null) { const p = S.products[+el.dataset.qp]; if (!p) return; p.price = Math.max(0, Math.round(+el.value || 0)); if (p.was && p.was <= p.price) p.was = 0; changed(); return }
   if (el.dataset.li) { const [path, i, k, kind] = el.dataset.li.split("|");
     if (kind === "b") { getPath(S, path)[+i][k] = el.checked; const row = el.closest(".lrow"); row.classList.toggle("off", !el.checked); row.querySelector(".switch .st").textContent = el.checked ? "Active" : "Inactive" }
