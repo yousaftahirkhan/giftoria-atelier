@@ -26,7 +26,7 @@ function card(p){
   return `<article class="card">
     <div style="position:relative"><button class="pic" data-qv="${esc(p.id)}" aria-label="View ${esc(p.name)}">${visual(p)}</button>${badge}${p.photo&&p.sample?SAMPLE_TAG:""}
     <button class="heart" data-wish="${esc(p.id)}" aria-pressed="${inW}" aria-label="Wishlist">${inW?"♥":"♡"}</button></div>
-    <div class="body"><span class="cat">${esc(CATN[p.cat]||"")}</span><h3>${esc(p.name)}</h3><span class="sub">${esc(p.spec)}</span>
+    <div class="body"><span class="cat">${esc(CATN[p.cat]||"")}</span><h3><button class="ttl" type="button" data-qv="${esc(p.id)}">${esc(p.name)}</button></h3><span class="sub">${esc(p.spec)}</span>
       <div class="prices"><span class="price">${rs(p.price)}</span>${p.was>p.price?`<span class="was">${rs(p.was)}</span>`:""}</div></div>
     <div class="acts">${p.soldOut?`<button class="add" disabled>Sold out</button>`:cart[p.id]?`<div class="stepper" role="group" aria-label="Quantity of ${esc(p.name)}"><button type="button" data-step-id="${esc(p.id)}" data-step-d="-1" aria-label="Remove one">−</button><span>${cart[p.id]} in cart</span><button type="button" data-step-id="${esc(p.id)}" data-step-d="1" aria-label="Add one">+</button></div>`:`<button class="add" data-add="${esc(p.id)}">Add to cart</button>`}<button class="qv" data-qv="${esc(p.id)}">View</button></div>
   </article>`;

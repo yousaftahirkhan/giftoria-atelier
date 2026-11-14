@@ -359,3 +359,16 @@ footer .logo b{font-size:32px;color:var(--bg)}
 .social a{min-height:40px;display:inline-flex;align-items:center}
 .dots>button{position:relative}
 .dots>button::after{content:"";position:absolute;inset:-15px -6px}
+/* product card buttons never overlap, on any phone:
+   - narrow cards (two columns on phones, under 240px) show one full-width button; the photo and the name open the product
+   - wider cards show the button and View side by side
+   - if anything still does not fit (old phones, extra-large text), it moves to its own line instead of overlapping */
+.card{container-type:inline-size}
+.card .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.card .acts>.add,.card .acts>.stepper{flex:1 1 auto;min-width:auto}
+.card .acts>.qv{flex:0 0 auto}
+.card .acts .add,.card .acts .qv{min-height:40px}
+.stepper span{text-align:center;flex:1}
+@container (max-width:239px){.card .acts>.qv{display:none}}
+.card h3 .ttl{all:unset;cursor:pointer;display:inline;font:inherit;color:inherit;overflow-wrap:anywhere}
+.card h3 .ttl:focus-visible{outline:3px solid var(--rose);outline-offset:2px;border-radius:4px}
