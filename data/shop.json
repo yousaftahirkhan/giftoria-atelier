@@ -282,16 +282,23 @@
   {
    "id": "rose1",
    "cat": "mini",
-   "name": "Single Red Rose",
-   "spec": "1 stem · pipe cleaner · 12 in",
-   "desc": "A single red rose with a leaf. A small gesture that lasts.",
+   "name": "Single Red Rose Bouquet",
+   "spec": "Handmade satin ribbon rose bouquet",
+   "desc": "Handmade single red glitter ribbon rose in premium wrapping with a big red satin bow. A cute forever rose that never wilts",
    "price": 350,
    "occ": [
+    "eid",
+    "shaadi",
+    "anniversary",
+    "graduation",
     "love"
    ],
    "added": 6,
-   "photo": "images/products/rose1.jpg",
-   "sample": true
+   "photo": "images/products/rose1-mwjlfxtx4he.jpg",
+   "was": 0,
+   "best": false,
+   "isNew": true,
+   "soldOut": false
   },
   {
    "id": "tulip1",
