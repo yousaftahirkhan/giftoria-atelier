@@ -245,6 +245,25 @@
    "sample": true
   },
   {
+   "id": "rosebox",
+   "cat": "box",
+   "name": "Red Heart Ribbon Rose Box",
+   "spec": "15 roses · lidded gift box",
+   "desc": "White Heart Box filled with handmade red satin ribbon roses, with silver butterfly & red ribbon bow.",
+   "price": 3500,
+   "isNew": true,
+   "occ": [
+    "birthday",
+    "anniversary",
+    "love"
+   ],
+   "added": 14,
+   "photo": "images/products/rosebox-mwjk32kllhh.jpg",
+   "was": 0,
+   "best": false,
+   "soldOut": false
+  },
+  {
    "id": "pastel12",
    "cat": "bouquet",
    "name": "Pastel Garden Bouquet",
@@ -258,22 +277,6 @@
    ],
    "added": 10,
    "photo": "images/products/pastel12.jpg",
-   "sample": true
-  },
-  {
-   "id": "rosebox",
-   "cat": "box",
-   "name": "Red Rose Keepsake Box",
-   "spec": "9 roses · lidded gift box",
-   "desc": "Nine red pipe-cleaner roses set in a black keepsake box with a gold rim.",
-   "price": 3200,
-   "isNew": true,
-   "occ": [
-    "love",
-    "anniversary"
-   ],
-   "added": 14,
-   "photo": "images/products/rosebox.jpg",
    "sample": true
   },
   {
