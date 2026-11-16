@@ -372,3 +372,11 @@ footer .logo b{font-size:32px;color:var(--bg)}
 @container (max-width:239px){.card .acts>.qv{display:none}}
 .card h3 .ttl{all:unset;cursor:pointer;display:inline;font:inherit;color:inherit;overflow-wrap:anywhere}
 .card h3 .ttl:focus-visible{outline:3px solid var(--rose);outline-offset:2px;border-radius:4px}
+/* questions customers ask */
+.faq{display:flex;flex-direction:column;gap:10px;max-width:820px}
+.faq-i{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:0 18px}
+.faq-i summary{cursor:pointer;font-weight:700;font-size:16px;padding:16px 28px 16px 0;list-style:none;position:relative;min-height:44px}
+.faq-i summary::-webkit-details-marker{display:none}
+.faq-i summary::after{content:"+";position:absolute;right:0;top:12px;font-size:22px;color:var(--rose);font-weight:400}
+.faq-i[open] summary::after{content:"−"}
+.faq-i p{margin:0 0 16px;color:var(--muted);font-size:15px;line-height:1.6}
